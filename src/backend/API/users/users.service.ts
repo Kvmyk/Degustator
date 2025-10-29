@@ -1,115 +1,80 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { Injectable } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from './entities/user.entity';
 
-/**
- * Interface definiujący strukturę użytkownika
- * TypeScript zapewnia type safety podczas kompilacji
- */
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  age?: number; // ? oznacza opcjonalne pole
-}
-
-/**
- * UsersService - Serwis zawierający logikę biznesową
- * 
- * @Injectable() - Dekorator oznaczający, że klasa może być wstrzykiwana przez DI
- * To sprawia, że NestJS może zarządzać tą klasą i wstrzykiwać ją do innych komponentów
- * 
- * Dlaczego używamy serwisów?
- * - Business Logic: Cała logika biznesowa w jednym miejscu
- * - Reużywalność: Może być użyty w wielu kontrolerach
- * - Testowanie: Łatwo testować bez HTTP layer
- * - Single Responsibility: Service zajmuje się tylko logiką, nie HTTP
- */
 @Injectable()
 export class UsersService {
-  /**
-   * Symulowana baza danych - w prawdziwym projekcie byłby to TypeORM, Prisma, etc.
-   * private - dostępne tylko wewnątrz klasy
-   */
-  private users: User[] = [
-    { id: 1, name: 'Jan Kowalski', email: 'jan@example.com', age: 25 },
-    { id: 2, name: 'Anna Nowak', email: 'anna@example.com', age: 30 },
-  ];
-
-  private nextId = 3; // Licznik dla nowych ID
-
-  /**
-   * Pobiera wszystkich użytkowników
-   * Prosta metoda zwracająca tablicę
-   */
-  findAll(): User[] {
-    return this.users;
+  // TODO: Inject database repository (e.g., TypeORM, Prisma, etc.)
+  
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    // TODO: Implement user creation logic
+    // - Hash password
+    // - Generate embedding vector
+    // - Save to database
+    throw new Error('Method not implemented');
   }
 
-  /**
-   * Znajduje użytkownika po ID
-   * 
-   * Dlaczego rzucamy wyjątek zamiast zwracać null?
-   * - NestJS automatycznie konwertuje wyjątki na odpowiednie kody HTTP
-   * - NotFoundException → 404 Not Found
-   * - Klient API dostaje spójną strukturę błędu
-   */
-  findOne(id: number): User {
-    const user = this.users.find(u => u.id === id);
-    
-    if (!user) {
-      throw new NotFoundException(`Użytkownik o ID ${id} nie został znaleziony`);
-    }
-    
-    return user;
+  async findAll(): Promise<User[]> {
+    // TODO: Implement findAll logic
+    // - Query all users from database
+    // - Exclude sensitive fields like password_hash
+    throw new Error('Method not implemented');
   }
 
-  /**
-   * Tworzy nowego użytkownika
-   * 
-   * CreateUserDto zapewnia:
-   * - Type safety
-   * - Automatyczną walidację (jeśli użyjemy class-validator)
-   * - Dokumentację API (przy użyciu Swagger)
-   */
-  create(createUserDto: CreateUserDto): User {
-    const newUser: User = {
-      id: this.nextId++,
-      ...createUserDto, // Spread operator - kopiuje wszystkie pola z DTO
-    };
-    
-    this.users.push(newUser);
-    return newUser;
+  async findOne(id: string): Promise<User> {
+    // TODO: Implement findOne logic
+    // - Query user by ID
+    // - Exclude password_hash
+    throw new Error('Method not implemented');
   }
 
-  /**
-   * Aktualizuje użytkownika
-   * 
-   * Strategia:
-   * 1. Znajdź użytkownika (rzuć wyjątek jeśli nie istnieje)
-   * 2. Zaktualizuj pola
-   * 3. Zwróć zaktualizowanego użytkownika
-   */
-  update(id: number, updateUserDto: UpdateUserDto): User {
-    const user = this.findOne(id); // Użyjemy istniejącej metody
-    
-    // Object.assign kopiuje właściwości z updateUserDto do user
-    Object.assign(user, updateUserDto);
-    
-    return user;
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    // TODO: Implement update logic
+    // - Update user fields
+    // - Update embedding vector if needed
+    throw new Error('Method not implemented');
   }
 
-  /**
-   * Usuwa użytkownika
-   * 
-   * Zwraca void - DELETE nie powinien zwracać danych (204 No Content)
-   */
-  remove(id: number): void {
-    const index = this.users.findIndex(u => u.id === id);
-    
-    if (index === -1) {
-      throw new NotFoundException(`Użytkownik o ID ${id} nie został znaleziony`);
-    }
-    
-    this.users.splice(index, 1);
+  async remove(id: string): Promise<void> {
+    // TODO: Implement delete logic
+    // - Soft delete or hard delete
+    throw new Error('Method not implemented');
+  }
+
+  async getFollowers(id: string): Promise<User[]> {
+    // TODO: Implement followers retrieval
+    // - Query FOLLOWS relationship
+    throw new Error('Method not implemented');
+  }
+
+  async getFollowing(id: string): Promise<User[]> {
+    // TODO: Implement following retrieval
+    // - Query FOLLOWS relationship
+    throw new Error('Method not implemented');
+  }
+
+  async followUser(userId: string, targetUserId: string): Promise<void> {
+    // TODO: Implement follow logic
+    // - Create FOLLOWS relationship
+    throw new Error('Method not implemented');
+  }
+
+  async unfollowUser(userId: string, targetUserId: string): Promise<void> {
+    // TODO: Implement unfollow logic
+    // - Remove FOLLOWS relationship
+    throw new Error('Method not implemented');
+  }
+
+  async getUserPosts(id: string): Promise<any[]> {
+    // TODO: Implement user posts retrieval
+    // - Query posts CREATED by user
+    throw new Error('Method not implemented');
+  }
+
+  async getLikedPosts(id: string): Promise<any[]> {
+    // TODO: Implement liked posts retrieval
+    // - Query posts LIKED by user
+    throw new Error('Method not implemented');
   }
 }
