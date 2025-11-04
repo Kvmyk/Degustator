@@ -1,42 +1,122 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Neo4jService } from '../../db/neo4j.service';
 import { CreateIngredientDto } from './dto/create-ingredient.dto';
 import { UpdateIngredientDto } from './dto/update-ingredient.dto';
-import { Ingredient } from './entities/ingredient.entity';
 
 @Injectable()
 export class IngredientsService {
-  async create(createIngredientDto: CreateIngredientDto): Promise<Ingredient> {
-    // TODO: Implement ingredient creation
-    throw new Error('Method not implemented');
+  constructor(private neo4jService: Neo4jService) {}
+
+  async create(createIngredientDto: CreateIngredientDto): Promise<any> {
+    try {
+      const query = `
+        CREATE (i:Ingredient {
+          id: apoc.create.uuid(),
+          name: $name,
+          avg_cost: $avg_cost,
+          popularity: 0,
+          created_at: datetime()
+        })
+        RETURN i
+      `;
+
+      const result = await this.neo4jService.write(query, {
+        name: createIngredientDto.name,
+        avg_cost: createIngredientDto.avg_cost || 0,
+      });
+
+      return result[0].i.properties;
+    } catch (error) {
+      throw new BadRequestException(`Failed to create ingredient: ${error.message}`);
+    }
   }
 
-  async findAll(): Promise<Ingredient[]> {
-    // TODO: Get all ingredients
-    throw new Error('Method not implemented');
+  async findAll(): Promise<any[]> {
+    const query = `
+      MATCH (i:Ingredient)
+      RETURN i
+      LIMIT 100
+    `;
+
+    const result = await this.neo4jService.read(query);
+    return result.map(r => r.i.properties);
   }
 
-  async findPopular(): Promise<Ingredient[]> {
-    // TODO: Get ingredients sorted by popularity
-    throw new Error('Method not implemented');
+  async findPopular(): Promise<any[]> {
+    const query = `
+      MATCH (i:Ingredient)
+      RETURN i
+      ORDER BY i.popularity DESC
+      LIMIT 50
+    `;
+
+    const result = await this.neo4jService.read(query);
+    return result.map(r => r.i.properties);
   }
 
-  async findOne(id: string): Promise<Ingredient> {
-    // TODO: Get single ingredient
-    throw new Error('Method not implemented');
+  async findOne(id: string): Promise<any> {
+    const query = `
+      MATCH (i:Ingredient { id: $id })
+      RETURN i
+    `;
+
+    const result = await this.neo4jService.read(query, { id });
+
+    if (result.length === 0) {
+      throw new NotFoundException('Ingredient not found');
+    }
+
+    return result[0].i.properties;
   }
 
-  async update(id: string, updateIngredientDto: UpdateIngredientDto): Promise<Ingredient> {
-    // TODO: Update ingredient
-    throw new Error('Method not implemented');
+  async update(id: string, updateIngredientDto: UpdateIngredientDto): Promise<any> {
+    try {
+      const query = `
+        MATCH (i:Ingredient { id: $id })
+        SET i += $data
+        RETURN i
+      `;
+
+      const result = await this.neo4jService.write(query, {
+        id,
+        data: updateIngredientDto,
+      });
+
+      if (result.length === 0) {
+        throw new NotFoundException('Ingredient not found');
+      }
+
+      return result[0].i.properties;
+    } catch (error) {
+      throw new BadRequestException(`Failed to update ingredient: ${error.message}`);
+    }
   }
 
-  async remove(id: string): Promise<void> {
-    // TODO: Delete ingredient
-    throw new Error('Method not implemented');
+  async remove(id: string): Promise<{ message: string }> {
+    const query = `
+      MATCH (i:Ingredient { id: $id })
+      DETACH DELETE i
+      RETURN id(i) as deletedId
+    `;
+
+    const result = await this.neo4jService.write(query, { id });
+
+    if (result.length === 0) {
+      throw new NotFoundException('Ingredient not found');
+    }
+
+    return { message: 'Ingredient deleted successfully' };
   }
 
   async getPostsByIngredient(ingredientId: string): Promise<any[]> {
-    // TODO: Get all posts with this ingredient via HAS_INGREDIENT relationship
-    throw new Error('Method not implemented');
+    const query = `
+      MATCH (i:Ingredient { id: $ingredientId })<-[:HAS_INGREDIENT]-(p:Post)
+      RETURN p
+      ORDER BY p.created_at DESC
+      LIMIT 100
+    `;
+
+    const result = await this.neo4jService.read(query, { ingredientId });
+    return result.map(r => r.p.properties);
   }
 }
