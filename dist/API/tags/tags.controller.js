@@ -97,7 +97,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TagsController.prototype, "getPostsByTag", null);
 exports.TagsController = TagsController = __decorate([
-    (0, common_1.Controller)('api/tags'),
+    (0, common_1.Controller)('tags'),
     __metadata("design:paramtypes", [tags_service_1.TagsService])
 ], TagsController);
 //# sourceMappingURL=tags.controller.js.map

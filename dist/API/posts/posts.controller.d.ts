@@ -5,7 +5,7 @@ export declare class PostsController {
     private readonly postsService;
     constructor(postsService: PostsService);
     createPost(createPostDto: CreatePostDto): Promise<any>;
-    getAllPosts(limit?: number, offset?: number, sortBy?: 'created_at' | 'avg_rating' | 'likes_count'): Promise<any[]>;
+    getAllPosts(limit?: string, offset?: string, sortBy?: 'created_at' | 'avg_rating' | 'likes_count'): Promise<any[]>;
     searchPosts(query: string): Promise<any[]>;
     getPostById(id: string): Promise<any>;
     updatePost(id: string, updatePostDto: UpdatePostDto): Promise<any>;

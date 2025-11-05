@@ -44,6 +44,14 @@ let Neo4jService = Neo4jService_1 = class Neo4jService {
     async read(query, params) {
         const session = this.driver.session({ defaultAccessMode: neo4j.session.READ });
         try {
+            if (params) {
+                if (params.limit !== undefined) {
+                    params.limit = neo4j.int(params.limit);
+                }
+                if (params.offset !== undefined) {
+                    params.offset = neo4j.int(params.offset);
+                }
+            }
             const result = await session.run(query, params);
             return result.records.map(record => record.toObject());
         }

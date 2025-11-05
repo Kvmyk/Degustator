@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
 import { Neo4jModule } from './db/neo4j.module';
+import { ApiController } from './api.controller';
 import { UsersModule } from './API/users/users.module';
 import { PostsModule } from './API/posts/posts.module';
 import { ReviewsModule } from './API/reviews/reviews.module';
@@ -17,7 +18,7 @@ import { IngredientsModule } from './API/ingredients/ingredients.module';
     TagsModule,
     IngredientsModule,
   ],
-  controllers: [],
+  controllers: [ApiController],
   providers: [],
 })
 export class AppModule {}

@@ -10,6 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_module_1 = require("./config/config.module");
 const neo4j_module_1 = require("./db/neo4j.module");
+const api_controller_1 = require("./api.controller");
 const users_module_1 = require("./API/users/users.module");
 const posts_module_1 = require("./API/posts/posts.module");
 const reviews_module_1 = require("./API/reviews/reviews.module");
@@ -29,7 +30,7 @@ exports.AppModule = AppModule = __decorate([
             tags_module_1.TagsModule,
             ingredients_module_1.IngredientsModule,
         ],
-        controllers: [],
+        controllers: [api_controller_1.ApiController],
         providers: [],
     })
 ], AppModule);

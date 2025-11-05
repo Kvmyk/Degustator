@@ -26,7 +26,7 @@ let PostsService = class PostsService {
           content: $content,
           recipe: $recipe,
           photos: $photos,
-          avg_rating: 0.0,
+          avg_rating: 0,
           likes_count: 0,
           created_at: datetime()
         })
@@ -51,18 +51,25 @@ let PostsService = class PostsService {
         }
     }
     async findAll(options) {
-        const limit = options.limit || 20;
-        const offset = options.offset || 0;
-        const sortBy = options.sortBy || 'created_at';
-        const query = `
-      MATCH (p:Post)
-      RETURN p
-      ORDER BY p.${sortBy} DESC
-      SKIP $offset
-      LIMIT $limit
-    `;
-        const result = await this.neo4jService.read(query, { limit, offset });
-        return result.map(r => r.p.properties);
+        try {
+            const limit = options.limit || 20;
+            const offset = options.offset || 0;
+            const validSortFields = ['created_at', 'avg_rating', 'likes_count'];
+            const sortBy = validSortFields.includes(options.sortBy) ? options.sortBy : 'created_at';
+            const query = `
+        MATCH (p:Post)
+        RETURN p
+        ORDER BY p.${sortBy} DESC
+        SKIP $offset
+        LIMIT $limit
+      `;
+            const result = await this.neo4jService.read(query, { limit, offset });
+            return result.map(r => r.p.properties);
+        }
+        catch (error) {
+            console.error('Error in findAll:', error);
+            throw new common_1.BadRequestException(`Failed to fetch posts: ${error.message}`);
+        }
     }
     async findOne(id) {
         const query = `

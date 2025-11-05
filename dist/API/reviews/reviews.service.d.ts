@@ -5,6 +5,7 @@ export declare class ReviewsService {
     private neo4jService;
     constructor(neo4jService: Neo4jService);
     create(createReviewDto: CreateReviewDto): Promise<any>;
+    findAll(): Promise<any[]>;
     findByPost(postId: string): Promise<any[]>;
     findByUser(userId: string): Promise<any[]>;
     findOne(id: string): Promise<any>;

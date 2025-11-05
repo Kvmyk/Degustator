@@ -3,13 +3,18 @@ import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 
-@Controller('api/reviews')
+@Controller('reviews')
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
   async createReview(@Body() createReviewDto: CreateReviewDto) {
     return await this.reviewsService.create(createReviewDto);
+  }
+
+  @Get()
+  async getAllReviews() {
+    return await this.reviewsService.findAll();
   }
 
   @Get('post/:postId')

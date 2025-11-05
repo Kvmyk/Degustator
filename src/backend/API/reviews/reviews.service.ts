@@ -43,6 +43,24 @@ export class ReviewsService {
     }
   }
 
+  async findAll(): Promise<any[]> {
+    const query = `
+      MATCH (r:Review)
+      OPTIONAL MATCH (u:User)-[:CREATED]->(r)
+      OPTIONAL MATCH (r)-[:REVIEWED]->(p:Post)
+      RETURN r, u as author, p as post
+      ORDER BY r.created_at DESC
+      LIMIT 100
+    `;
+
+    const result = await this.neo4jService.read(query);
+    return result.map(r => ({
+      ...r.r.properties,
+      author: r.author?.properties,
+      post: r.post?.properties,
+    }));
+  }
+
   async findByPost(postId: string): Promise<any[]> {
     const query = `
       MATCH (r:Review)-[:REVIEWED]->(p:Post { id: $postId })

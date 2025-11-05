@@ -97,7 +97,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], IngredientsController.prototype, "getPostsByIngredient", null);
 exports.IngredientsController = IngredientsController = __decorate([
-    (0, common_1.Controller)('api/ingredients'),
+    (0, common_1.Controller)('ingredients'),
     __metadata("design:paramtypes", [ingredients_service_1.IngredientsService])
 ], IngredientsController);
 //# sourceMappingURL=ingredients.controller.js.map

@@ -25,7 +25,11 @@ let PostsController = class PostsController {
         return await this.postsService.create(createPostDto);
     }
     async getAllPosts(limit, offset, sortBy) {
-        return await this.postsService.findAll({ limit, offset, sortBy });
+        return await this.postsService.findAll({
+            limit: limit ? parseInt(limit, 10) : undefined,
+            offset: offset ? parseInt(offset, 10) : undefined,
+            sortBy,
+        });
     }
     async searchPosts(query) {
         return await this.postsService.searchPosts(query);
@@ -79,7 +83,7 @@ __decorate([
     __param(1, (0, common_1.Query)('offset')),
     __param(2, (0, common_1.Query)('sortBy')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], PostsController.prototype, "getAllPosts", null);
 __decorate([
@@ -165,7 +169,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], PostsController.prototype, "addIngredientToPost", null);
 exports.PostsController = PostsController = __decorate([
-    (0, common_1.Controller)('api/posts'),
+    (0, common_1.Controller)('posts'),
     __metadata("design:paramtypes", [posts_service_1.PostsService])
 ], PostsController);
 //# sourceMappingURL=posts.controller.js.map

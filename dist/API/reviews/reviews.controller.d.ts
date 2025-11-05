@@ -5,6 +5,7 @@ export declare class ReviewsController {
     private readonly reviewsService;
     constructor(reviewsService: ReviewsService);
     createReview(createReviewDto: CreateReviewDto): Promise<any>;
+    getAllReviews(): Promise<any[]>;
     getReviewsByPost(postId: string): Promise<any[]>;
     getReviewsByUser(userId: string): Promise<any[]>;
     getReviewById(id: string): Promise<any>;

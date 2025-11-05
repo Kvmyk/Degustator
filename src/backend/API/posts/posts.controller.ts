@@ -3,7 +3,7 @@ import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
-@Controller('api/posts')
+@Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
@@ -14,11 +14,15 @@ export class PostsController {
 
   @Get()
   async getAllPosts(
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
     @Query('sortBy') sortBy?: 'created_at' | 'avg_rating' | 'likes_count',
   ) {
-    return await this.postsService.findAll({ limit, offset, sortBy });
+    return await this.postsService.findAll({
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+      sortBy,
+    });
   }
 
   @Get('search')

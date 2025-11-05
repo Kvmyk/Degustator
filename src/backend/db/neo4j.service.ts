@@ -37,6 +37,15 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   async read(query: string, params?: Record<string, any>) {
     const session = this.driver.session({ defaultAccessMode: neo4j.session.READ });
     try {
+      // Ensure limit and offset are integers using neo4j.int()
+      if (params) {
+        if (params.limit !== undefined) {
+          params.limit = neo4j.int(params.limit);
+        }
+        if (params.offset !== undefined) {
+          params.offset = neo4j.int(params.offset);
+        }
+      }
       const result = await session.run(query, params);
       return result.records.map(record => record.toObject());
     } catch (error) {

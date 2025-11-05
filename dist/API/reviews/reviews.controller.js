@@ -24,6 +24,9 @@ let ReviewsController = class ReviewsController {
     async createReview(createReviewDto) {
         return await this.reviewsService.create(createReviewDto);
     }
+    async getAllReviews() {
+        return await this.reviewsService.findAll();
+    }
     async getReviewsByPost(postId) {
         return await this.reviewsService.findByPost(postId);
     }
@@ -52,6 +55,12 @@ __decorate([
     __metadata("design:paramtypes", [create_review_dto_1.CreateReviewDto]),
     __metadata("design:returntype", Promise)
 ], ReviewsController.prototype, "createReview", null);
+__decorate([
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ReviewsController.prototype, "getAllReviews", null);
 __decorate([
     (0, common_1.Get)('post/:postId'),
     __param(0, (0, common_1.Param)('postId')),
@@ -89,7 +98,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ReviewsController.prototype, "deleteReview", null);
 exports.ReviewsController = ReviewsController = __decorate([
-    (0, common_1.Controller)('api/reviews'),
+    (0, common_1.Controller)('reviews'),
     __metadata("design:paramtypes", [reviews_service_1.ReviewsService])
 ], ReviewsController);
 //# sourceMappingURL=reviews.controller.js.map
