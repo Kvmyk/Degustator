@@ -12,7 +12,7 @@ export class PostsService {
       const query = `
         MATCH (u:User { id: $userId })
         CREATE (p:Post {
-          id: apoc.create.uuid(),
+          id: randomUUID(),
           title: $title,
           content: $content,
           recipe: $recipe,

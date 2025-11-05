@@ -12,7 +12,7 @@ export class ReviewsService {
       const query = `
         MATCH (u:User { id: $userId }), (p:Post { id: $postId })
         CREATE (r:Review {
-          id: apoc.create.uuid(),
+          id: randomUUID(),
           rating: $rating,
           content: $content,
           created_at: datetime()

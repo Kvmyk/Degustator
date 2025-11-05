@@ -11,7 +11,7 @@ export class TagsService {
     try {
       const query = `
         CREATE (t:Tag {
-          id: apoc.create.uuid(),
+          id: randomUUID(),
           name: $name,
           description: $description,
           popularity: 0,

@@ -11,7 +11,7 @@ export class IngredientsService {
     try {
       const query = `
         CREATE (i:Ingredient {
-          id: apoc.create.uuid(),
+          id: randomUUID(),
           name: $name,
           avg_cost: $avg_cost,
           popularity: 0,

@@ -16,7 +16,7 @@ export class UsersService {
 
       const query = `
         CREATE (u:User {
-          id: apoc.create.uuid(),
+          id: randomUUID(),
           name: $name,
           email: $email,
           password_hash: $password_hash,
