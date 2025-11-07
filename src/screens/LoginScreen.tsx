@@ -25,15 +25,25 @@ const LoginScreen = ({ navigation }: Props) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  // Remove unused state
+  // const [resetPassword, setResetPassword] = useState('');
 
   const handleSignIn = () => {
+    if (!email || !password) {
+      alert('Please enter both email and password');
+      return;
+    }
     navigation.navigate('Feed');
   };
 
   const handleSignUp = () => {
-    // Navigate to sign up screen
-    console.log('Sign up');
+    navigation.navigate('Register'); // Fix navigation to Register screen
   };
+
+  const handleForgotPassword = () => {
+    navigation.navigate('ForgotPassword'); // Fix navigation to ForgotPassword screen
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -49,8 +59,11 @@ const LoginScreen = ({ navigation }: Props) => {
             <View style={styles.logoCircle}>
               <Image
                 source={require('../assets/logo.png')}
-                style={styles.logo}
+                style={styles.photo}
                 resizeMode="contain"
+                width={150}
+                height={150}
+              
               />
             </View>
           </View>
@@ -90,8 +103,15 @@ const LoginScreen = ({ navigation }: Props) => {
                 onPress={() => setRememberMe(!rememberMe)}
                 color="#666"
               />
-              <Text style={styles.checkboxLabel}>Remember me</Text>
-              <Text style={styles.forgotPassword}>Forgot password?</Text>
+                 <Text style={styles.checkboxLabel}>Remember me</Text>
+              <Button
+                mode="text"
+                onPress={handleForgotPassword}
+                textColor="#999"
+                style={styles.forgotPasswordButton}
+              >
+                Forgot Password?
+              </Button>
             </View>
 
             <Button
@@ -193,6 +213,9 @@ const styles = StyleSheet.create({
   forgotPassword: {
     fontSize: 14,
     color: '#999',
+  },
+  forgotPasswordButton: {
+    marginLeft: 'auto',
   },
   signInButton: {
     borderRadius: 8,

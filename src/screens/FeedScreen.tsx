@@ -145,32 +145,37 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     elevation: 0,
-    backgroundColor: '#fff',
+    backgroundColor: '#e8f4f8',
   },
   categoriesContainer: {
     backgroundColor: '#fff',
   },
   categoriesContent: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    paddingVertical: 0,
+    
   },
   categoryChip: {
     marginRight: 8,
     backgroundColor: '#fff',
+    height: 30,
+    width: 70,
+    justifyContent: 'auto',
   },
+
   selectedChip: {
     backgroundColor: '#000',
   },
   categoryChipText: {
     color: '#666',
-    fontSize: 12,
+    fontSize: 10,
+  
   },
   selectedChipText: {
     color: '#fff',
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#333',
   },
   feedContainer: {
@@ -184,11 +189,12 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: '100%',
-    height: 300,
+    height: 400,
     backgroundColor: '#d4f1a8',
+    justifyContent: 'center',
   },
   postContent: {
-    padding: 16,
+    padding: 8,
   },
   postTitle: {
     fontSize: 20,
@@ -215,11 +221,11 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   heartIcon: {
-    fontSize: 20,
+    fontSize: 30,
     color: '#e74c3c',
   },
   commentIcon: {
-    fontSize: 18,
+    fontSize: 25,
   },
   statText: {
     fontSize: 14,
