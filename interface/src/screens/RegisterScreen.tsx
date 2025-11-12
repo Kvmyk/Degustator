@@ -40,7 +40,7 @@ const RegisterScreen = ({ navigation }: Props) => {
   }
 
   try {
-    const res = await fetch('http://192.168.1.101:3001/api/auth/register', // ⚠️ Podmień na IP swojego komputera
+    const res = await fetch('http://192.168.0.102:3001/api/auth/register', // ⚠️ Podmień na IP swojego komputera
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
