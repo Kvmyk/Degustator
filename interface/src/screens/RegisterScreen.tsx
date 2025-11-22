@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert } from 'react-native';
+import { API_URL } from '@env';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -40,7 +41,7 @@ const RegisterScreen = ({ navigation }: Props) => {
   }
 
   try {
-    const res = await fetch('http://192.168.0.102:3001/api/auth/register', // ⚠️ Podmień na IP swojego komputera
+    const res = await fetch(`${API_URL}/api/auth/register`, // ⚠️ Podmień na IP swojego komputera
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

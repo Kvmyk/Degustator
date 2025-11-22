@@ -13,6 +13,7 @@ import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
+import { API_URL } from '@env';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -37,7 +38,7 @@ const LoginScreen = ({ navigation }: Props) => {
   }
 
   try {
-    const res = await fetch('http://192.168.0.102:3001/api/auth/login', // ⚠️ Podmień na IP swojego komputera
+    const res = await fetch(`${API_URL}/api/auth/login`, // ⚠️ Podmień na IP swojego komputera
     {
           method: 'POST',
       headers: { 'Content-Type': 'application/json' },

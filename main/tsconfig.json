@@ -21,6 +21,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/backend/API/auth/dto/auth.dto.ts"],
   "exclude": ["node_modules", "dist"]
 }
