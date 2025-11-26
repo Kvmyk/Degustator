@@ -98,11 +98,11 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
           <Text style={styles.commentsTitle}>Comments</Text>
 
           <View style={styles.commentItem}>
-            <Avatar.Icon
+            <Avatar.Text
               size={40}
-              icon="account"
+              label="JM"
               style={styles.avatar}
-              color="#999"
+              color="#fff"
             />
             <View style={styles.commentContent}>
               <Text style={styles.commentAuthor}>John Mcafee</Text>
@@ -114,11 +114,11 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
           </View>
 
           <View style={styles.commentItem}>
-            <Avatar.Icon
+            <Avatar.Text
               size={40}
-              icon="account"
+              label="JM"
               style={styles.avatar}
-              color="#999"
+              color="#fff"
             />
             <View style={styles.commentContent}>
               <Text style={styles.commentAuthor}>Terry Davis</Text>

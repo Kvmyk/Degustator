@@ -124,7 +124,7 @@ const FeedScreen = ({ navigation }: Props) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Avatar.Icon size={40} icon="account-circle" color="#666" />
+          <Avatar.Text size={40} label={userName ? userName.substring(0, 2).toUpperCase() : 'GU'} style={{ backgroundColor: '#ccc' }} />
           <Text style={styles.userName}>{userName || 'Guest'}</Text>
           <Chip style={styles.categoryChip} textStyle={styles.chipText}>
             Cocktail
@@ -141,6 +141,7 @@ const FeedScreen = ({ navigation }: Props) => {
           onSubmitEditing={handleSearchFocus}
           style={styles.searchBar}
           iconColor="#666"
+          icon={() => <Text style={{ fontSize: 20 }}>🔍</Text>}
         />
       </View>
 

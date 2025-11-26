@@ -44,7 +44,10 @@ const SearchPostsScreen = ({ navigation }: Props) => {
       <Card style={styles.card}>
         <Card.Content>
           <View style={styles.postHeader}>
-            <Avatar.Icon size={40} icon="account" />
+            <Avatar.Text
+              size={40}
+              label={item.author?.name ? item.author.name.substring(0, 2).toUpperCase() : 'U'}
+            />
             <View style={styles.postMeta}>
               <Text style={styles.authorName}>{item.author?.name || 'Unknown'}</Text>
               <Text style={styles.timestamp}>
@@ -76,6 +79,7 @@ const SearchPostsScreen = ({ navigation }: Props) => {
         onChangeText={handleTextChange}
         onClearIconPress={handleClear}
         style={styles.searchbar}
+        icon={() => <Text style={{ fontSize: 20 }}>🔍</Text>}
       />
 
       {error && (

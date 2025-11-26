@@ -85,6 +85,7 @@ const SearchUsersScreen = ({ navigation }: Props) => {
         onChangeText={handleTextChange}
         onClearIconPress={handleClear}
         style={styles.searchbar}
+        icon={() => <Text style={{ fontSize: 20 }}>🔍</Text>}
       />
 
       {error && (

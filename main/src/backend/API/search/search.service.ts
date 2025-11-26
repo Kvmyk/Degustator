@@ -4,17 +4,17 @@ import { SearchPostsDto, SearchUsersDto } from './dto/search.dto';
 
 @Injectable()
 export class SearchService {
-  constructor(private neo4jService: Neo4jService) {}
+  constructor(private neo4jService: Neo4jService) { }
 
   async searchPosts(searchDto: SearchPostsDto): Promise<any[]> {
     try {
       console.log('='.repeat(50));
       console.log('START searchPosts');
       console.log('Input:', { searchDto });
-      
+
       const query = searchDto.query?.trim();
       console.log('Query after trim:', query);
-      
+
       if (!query || query.length < 2) {
         console.log('Query too short, returning []');
         return [];
@@ -41,10 +41,10 @@ export class SearchService {
       `;
 
       console.log('Executing Cypher...');
-      const result = await this.neo4jService.read(cypherQuery, { 
-        query, 
-        limit, 
-        offset 
+      const result = await this.neo4jService.read(cypherQuery, {
+        query,
+        limit,
+        offset
       });
 
       console.log('Raw result from Neo4j:');
@@ -102,10 +102,10 @@ export class SearchService {
       console.log('='.repeat(50));
       console.log('START searchUsers');
       console.log('Input:', { searchDto });
-      
+
       const query = searchDto.query?.trim();
       console.log('Query after trim:', query);
-      
+
       if (!query || query.length < 2) {
         console.log('Query too short, returning []');
         return [];
@@ -129,9 +129,9 @@ export class SearchService {
       `;
 
       console.log('Executing Cypher...');
-      const result = await this.neo4jService.read(cypherQuery, { 
-        query, 
-        limit 
+      const result = await this.neo4jService.read(cypherQuery, {
+        query,
+        limit
       });
 
       console.log('Raw result from Neo4j:');
@@ -141,21 +141,28 @@ export class SearchService {
         console.log('⚠️ Result is not array, wrapping...');
         return [];
       }
-
       console.log('Starting map...');
       const mapped = result.map((r: any, index: number) => {
         console.log(`\nMapping record ${index}:`);
         console.log('Record:', JSON.stringify(r, null, 2));
 
         try {
+          const toNumber = (val: any) => {
+            if (val === null || val === undefined) return 0;
+            if (typeof val === 'number') return val;
+            if (val.toNumber) return val.toNumber(); // Neo4j Integer object
+            if (val.low !== undefined) return val.low; // Plain object with low/high
+            return Number(val) || 0;
+          };
+
           const mapped = {
             id: r.u?.properties?.id || r.u?.id,
             name: r.u?.properties?.name || r.u?.name,
             email: r.u?.properties?.email || r.u?.email,
             bio: r.u?.properties?.bio || r.u?.bio,
             photo_url: r.u?.properties?.photo_url || r.u?.photo_url,
-            followerCount: r.followerCount?.toNumber?.() || r.followerCount || 0,
-            followingCount: r.followingCount?.toNumber?.() || r.followingCount || 0,
+            followerCount: toNumber(r.followerCount),
+            followingCount: toNumber(r.followingCount),
           };
           console.log('Mapped successfully:', mapped);
           return mapped;
