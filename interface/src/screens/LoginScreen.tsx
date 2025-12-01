@@ -28,48 +28,49 @@ const LoginScreen = ({ navigation }: Props) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  // Remove unused state
-  // const [resetPassword, setResetPassword] = useState('');
 
   const handleSignIn = async () => {
-  if (!email || !password) {
-    Alert.alert('Błąd', 'Wpisz adres e-mail i hasło');
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_URL}/api/auth/login`, // ⚠️ Podmień na IP swojego komputera
-    {
-          method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      Alert.alert('Logowanie nieudane', data.message || 'Spróbuj ponownie');
+    if (!email || !password) {
+      Alert.alert('Błąd', 'Wpisz adres e-mail i hasło');
       return;
     }
 
-    await AsyncStorage.setItem('token', data.token);
-    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+    try {
+      console.log('Attempting login with API_URL:', API_URL);
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    navigation.replace('Feed'); // lepsze niż navigate (usuwa ekran logowania z historii)
-  } catch (error) {
-    console.error('Login error:', error);
-    Alert.alert('Błąd', 'Nie udało się połączyć z serwerem');
-  }
-};
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Handle both string and array message formats
+        const errorMessage = Array.isArray(data.message)
+          ? data.message.join('\n')
+          : (data.message || 'Spróbuj ponownie');
+        Alert.alert('Logowanie nieudane', errorMessage);
+        return;
+      }
+
+      await AsyncStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+      navigation.replace('Feed');
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert('Błąd', 'Nie udało się połączyć z serwerem');
+    }
+  };
 
   const handleSignUp = () => {
-    navigation.navigate('Register'); // Fix navigation to Register screen
+    navigation.navigate('Register');
   };
 
   const handleForgotPassword = () => {
-    navigation.navigate('ForgotPassword'); // Fix navigation to ForgotPassword screen
+    navigation.navigate('ForgotPassword');
   };
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,11 +86,8 @@ const LoginScreen = ({ navigation }: Props) => {
             <View style={styles.logoCircle}>
               <Image
                 source={require('../assets/logo.png')}
-                style={styles.photo}
+                style={styles.logo}
                 resizeMode="contain"
-                width={150}
-                height={150}
-              
               />
             </View>
           </View>
@@ -129,7 +127,7 @@ const LoginScreen = ({ navigation }: Props) => {
                 onPress={() => setRememberMe(!rememberMe)}
                 color="#666"
               />
-                 <Text style={styles.checkboxLabel}>Remember me</Text>
+              <Text style={styles.checkboxLabel}>Remember me</Text>
               <Button
                 mode="text"
                 onPress={handleForgotPassword}
@@ -188,17 +186,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     backgroundColor: '#6b6b6b',
     justifyContent: 'center',
     alignItems: 'center',
   },
   logo: {
-    width: 100,
-    height: 100,
-    tintColor: '#fff',
+    width: 140,
+    height: 140,
   },
   title: {
     fontSize: 28,

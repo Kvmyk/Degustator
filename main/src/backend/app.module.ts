@@ -9,6 +9,7 @@ import { TagsModule } from './API/tags/tags.module';
 import { IngredientsModule } from './API/ingredients/ingredients.module';
 import { AuthModule } from './API/auth/auth.module';
 import { FollowModule } from './API/follow/follow.module';
+import { SearchModule } from './API/search/search.module';  
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { FollowModule } from './API/follow/follow.module';
     TagsModule,
     IngredientsModule,
     AuthModule,
-    FollowModule
+    FollowModule,
+    SearchModule
   ],
   controllers: [ApiController],
   providers: [],
