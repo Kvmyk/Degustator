@@ -55,14 +55,18 @@ export class PostsService {
 
       const query = `
         MATCH (p:Post)
-        RETURN p
+        OPTIONAL MATCH (u:User)-[:CREATED]->(p)
+        RETURN p, u AS author
         ORDER BY p.${sortBy} DESC
         SKIP $offset
         LIMIT $limit
       `;
 
       const result = await this.neo4jService.read(query, { limit, offset });
-      return result.map(r => r.p.properties);
+      return result.map(r => ({
+        ...r.p.properties,
+        author: r.author?.properties,
+      }));
     } catch (error) {
       console.error('Error in findAll:', error);
       throw new BadRequestException(`Failed to fetch posts: ${error.message}`);

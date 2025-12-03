@@ -9,6 +9,33 @@ export class ReviewsService {
 
   async create(createReviewDto: CreateReviewDto): Promise<any> {
     try {
+      // Block author from reviewing own post
+      const authorCheckQuery = `
+        MATCH (u:User { id: $userId }), (p:Post { id: $postId })
+        RETURN EXISTS((u)-[:CREATED]->(p)) AS isAuthor
+      `;
+      const authorRes = await this.neo4jService.read(authorCheckQuery, {
+        userId: createReviewDto.userId,
+        postId: createReviewDto.postId,
+      });
+      const isAuthor = !!(authorRes?.[0]?.isAuthor);
+      if (isAuthor) {
+        throw new BadRequestException('Authors cannot review their own posts');
+      }
+
+      // Prevent duplicate reviews by the same user for the same post
+      const existsQuery = `
+        MATCH (u:User { id: $userId })-[:CREATED]->(r:Review)-[:REVIEWED]->(p:Post { id: $postId })
+        RETURN r LIMIT 1
+      `;
+      const exists = await this.neo4jService.read(existsQuery, {
+        userId: createReviewDto.userId,
+        postId: createReviewDto.postId,
+      });
+      if (exists && exists.length > 0) {
+        throw new BadRequestException('User has already reviewed this post');
+      }
+
       const query = `
         MATCH (u:User { id: $userId }), (p:Post { id: $postId })
         CREATE (r:Review {
@@ -21,9 +48,10 @@ export class ReviewsService {
         CREATE (r)-[:REVIEWED]->(p)
         WITH p, r
         MATCH (p)<-[:REVIEWED]-(reviews:Review)
-        WITH p, avg(reviews.rating) as avg_rating
+        WITH p, r, avg(reviews.rating) AS avg_rating   // ← TU dodajemy r
         SET p.avg_rating = avg_rating
-        RETURN r
+        RETURN r;
+
       `;
 
       const result = await this.neo4jService.write(query, {
