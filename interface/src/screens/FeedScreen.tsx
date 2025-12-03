@@ -271,6 +271,7 @@ const FeedScreen = ({ navigation }: Props) => {
     const toNumber = (v: any) => (v && typeof v === 'object' && 'low' in v ? v.low : typeof v === 'number' ? v : 0);
     const likesCount = toNumber(item.likes_count);
     const commentsCount = toNumber(item.reviews_count);
+    const avgRating = toNumber(item.avg_rating);
     const isLiked = !!item.__liked;
 
     return (
@@ -317,6 +318,10 @@ const FeedScreen = ({ navigation }: Props) => {
             <View style={styles.stat}>
               <Text style={styles.commentIcon}>💬</Text>
               <Text style={styles.statText}>{commentsCount}</Text>
+            </View>
+            <View style={[styles.stat, styles.rightStat, styles.ratingPill]}>
+              <Text style={styles.starIcon}>⭐</Text>
+              <Text style={styles.ratingText}>{Number.isFinite(avgRating) ? avgRating.toFixed(1) : '0.0'}</Text>
             </View>
           </View>
         </View>
@@ -466,8 +471,12 @@ const styles = StyleSheet.create({
   postTags: { fontSize: 12, color: '#777', marginBottom: 10 },
   statsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   stat: { flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 16 },
+  rightStat: { marginLeft: 'auto', marginRight: 0 },
   heartIcon: { fontSize: 30, color: '#e74c3c' },
   heartIconLiked: { fontSize: 36, color: '#e74c3c' },
+  starIcon: { fontSize: 18, color: '#f1c40f' },
+  ratingPill: { backgroundColor: '#fff7df', borderWidth: 1, borderColor: '#ffe4a1', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 },
+  ratingText: { fontSize: 13, color: '#8a6d3b', fontWeight: '600' },
   commentIcon: { fontSize: 25 },
   statText: { fontSize: 14, color: '#333' },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
