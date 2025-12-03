@@ -59,9 +59,23 @@ export class PostsController {
     return await this.postsService.unlikePost(id, userId);
   }
 
+  @Get(':id/like/status')
+  async likeStatus(
+    @Param('id') id: string,
+    @Query('userId') userId: string,
+  ) {
+    const liked = await this.postsService.isLiked(id, userId);
+    return { liked };
+  }
+
   @Get(':id/reviews')
   async getPostReviews(@Param('id') id: string) {
     return await this.postsService.getReviews(id);
+  }
+
+  @Get(':id/reviews/count')
+  async getPostReviewsCount(@Param('id') id: string) {
+    return { reviews_count: await this.postsService.getReviewsCount(id) };
   }
 
   @Get(':id/tags')
