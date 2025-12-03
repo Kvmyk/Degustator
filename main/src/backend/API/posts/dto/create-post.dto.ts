@@ -1,4 +1,15 @@
-import { IsNotEmpty, IsString, IsArray, IsOptional, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsArray, IsOptional, IsUUID, IsIn } from 'class-validator';
+
+export const POST_CATEGORIES = [
+  'Coffee',
+  'Tea',
+  'Wine',
+  'Beer',
+  'Juice',
+  'Mocktails',
+  'Alcoholic Cocktails',
+  'Other',
+] as const;
 
 export class CreatePostDto {
   @IsNotEmpty()
@@ -17,6 +28,11 @@ export class CreatePostDto {
   @IsArray()
   @IsString({ each: true })
   photos?: string[];
+
+  @IsNotEmpty()
+  @IsString()
+  @IsIn(POST_CATEGORIES as unknown as string[])
+  category: string;
 
   @IsNotEmpty()
   @IsUUID()

@@ -20,6 +20,7 @@ const AddPostsScreen = ({ navigation }: Props) => {
   const [tags, setTags] = useState('');
   const [photos, setPhotos] = useState('');
   const [recipe, setRecipe] = useState('');
+  const [category, setCategory] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -34,6 +35,18 @@ const AddPostsScreen = ({ navigation }: Props) => {
     return list.length === 0;
   }, [ingredients]);
   const isFormInvalid = isTitleInvalid || isContentInvalid || isIngredientsInvalid;
+
+  const categories = [
+    'Coffee',
+    'Tea',
+    'Wine',
+    'Beer',
+    'Juice',
+    'Mocktails',
+    'Alcoholic Cocktails',
+    'Other',
+  ];
+  const isCategoryInvalid = useMemo(() => !categories.includes(category), [category]);
 
   const parsedTags = useMemo(
     () =>
@@ -87,6 +100,7 @@ const AddPostsScreen = ({ navigation }: Props) => {
           recipe: recipe.trim() || parsedIngredients.join(', ') || 'Recipe not provided',
           photos: photosArray,
           userId,
+          category: category || 'Other',
           // tagIds and ingredientIds are optional and require UUIDs; skipping here
         }),
       });
@@ -169,6 +183,7 @@ const AddPostsScreen = ({ navigation }: Props) => {
       setIngredients('');
       setPhotos('');
       setRecipe('');
+      setCategory('');
 
       // Optionally navigate back or to feed
       navigation.goBack();
@@ -193,6 +208,23 @@ const AddPostsScreen = ({ navigation }: Props) => {
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             <Card style={styles.card}>
               <Card.Content>
+              <Text style={styles.sectionLabel}>Category</Text>
+              <View style={styles.categoryRow}>
+                {categories.map(c => (
+                  <Button
+                    key={c}
+                    mode={category === c ? 'contained' : 'outlined'}
+                    style={styles.categoryChip}
+                    onPress={() => setCategory(c)}
+                    disabled={submitting}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </View>
+              <HelperText type="error" visible={isCategoryInvalid}>
+                Please select a category
+              </HelperText>
               <TextInput
                 label="Title"
                 value={title}
@@ -279,7 +311,7 @@ const AddPostsScreen = ({ navigation }: Props) => {
                     mode="contained"
                     onPress={handleSubmit}
                     loading={submitting}
-                    disabled={isFormInvalid || submitting}
+                    disabled={isFormInvalid || isCategoryInvalid || submitting}
                   >
                     Add Post
                   </Button>
@@ -311,6 +343,9 @@ const styles = StyleSheet.create({
   input: { marginTop: 12 },
   actions: { marginTop: 16, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   tagsPreview: { marginTop: 8, color: '#666' },
+  sectionLabel: { marginTop: 12, fontWeight: '600' },
+  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  categoryChip: { marginRight: 8, marginBottom: 8 },
 });
 
 export default AddPostsScreen;

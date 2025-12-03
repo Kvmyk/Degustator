@@ -9,4 +9,5 @@ export interface Post {
   avg_rating: number;
   likes_count: number;
   vector_id: string;
+  category: string;
 }
