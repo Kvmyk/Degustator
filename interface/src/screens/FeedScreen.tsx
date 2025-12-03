@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   Image,
+  FlatList,
+  ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { Text, Searchbar, Chip, Card, Avatar } from 'react-native-paper';
+import { Text, Searchbar, Chip, Card, Avatar, FAB } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,12 +31,38 @@ const FeedScreen = ({ navigation }: Props) => {
   const [userName, setUserName] = useState<string>('');
   const [following, setFollowing] = useState(false);
   const [searchType, setSearchType] = useState<'posts' | 'users'>('posts');
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   // Testowy użytkownik 
   const targetUserId = '331067d2-5cd9-4ca8-b8d3-ec621ea2649e';
   const targetUserName = 'adam';
 
   const categories = ['All', 'Coffee', 'Tea', 'Wine', 'Beer', 'Juice'];
+
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoadingPosts(true);
+      const token = await AsyncStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_URL}/api/posts?limit=50&sortBy=created_at`, {
+        headers,
+      });
+      if (!res.ok) {
+        throw new Error(`Nie udało się pobrać postów: ${res.status}`);
+      }
+      const data = await res.json();
+      setPosts(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Fetch posts error:', e);
+    } finally {
+      setLoadingPosts(false);
+    }
+  }, []);
 
   // Pobieramy dane zalogowanego użytkownika
   useEffect(() => {
@@ -77,6 +105,10 @@ const FeedScreen = ({ navigation }: Props) => {
     checkFollowing();
   }, []);
 
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
   const toggleFollow = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -118,6 +150,53 @@ const FeedScreen = ({ navigation }: Props) => {
     } else {
       navigation.navigate('SearchUsers');
     }
+  };
+  const handleAddPost = () => {
+    navigation.navigate('AddPost');
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchPosts();
+    setRefreshing(false);
+  };
+
+  const renderPost = ({ item }: { item: any }) => {
+    const firstPhoto = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos[0] : null;
+    const showFallback = !firstPhoto || imageErrors[item.id];
+    const toNumber = (v: any) => (v && typeof v === 'object' && 'low' in v ? v.low : typeof v === 'number' ? v : 0);
+    const likesCount = toNumber(item.likes_count);
+    const commentsCount = toNumber(item.reviews_count);
+
+    return (
+      <Card style={styles.postCard} onPress={() => handlePostPress(item.id)}>
+        {showFallback ? (
+          <View style={[styles.postImage, styles.noImageContainer]}>
+            <Text style={styles.noImageText}>no image</Text>
+          </View>
+        ) : (
+          <Image
+            source={{ uri: firstPhoto }}
+            style={styles.postImage}
+            resizeMode="cover"
+            onError={() => setImageErrors(prev => ({ ...prev, [item.id]: true }))}
+          />
+        )}
+        <View style={styles.postContent}>
+          <Text style={styles.postTitle}>{item.title}</Text>
+          <View style={styles.statsContainer}>
+            <View style={styles.stat}>
+              <Text style={styles.heartIcon}>♡</Text>
+              <Text style={styles.statText}>{likesCount}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.commentIcon}>💬</Text>
+              <Text style={styles.statText}>{commentsCount}</Text>
+            </View>
+          </View>
+        </View>
+      </Card>
+    );
   };
 
   return (
@@ -207,44 +286,32 @@ const FeedScreen = ({ navigation }: Props) => {
         ))}
       </ScrollView>
 
-      <ScrollView style={styles.feedContainer}>
-        {/* Testowy post użytkownika Adam */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => handlePostPress('1')}
-        >
-          <Card style={styles.postCard}>
-            <Image
-              source={require('../assets/gonster.png')}
-              style={styles.postImage}
-              resizeMode="cover"
-            />
-            <View style={styles.postContent}>
-              <Text style={styles.postTitle}>Post by {targetUserName}</Text>
-              <View style={styles.statsContainer}>
-                <View style={styles.stat}>
-                  <Text style={styles.heartIcon}>♡</Text>
-                  <Text style={styles.statText}>21</Text>
-                </View>
-                <View style={styles.stat}>
-                  <Text style={styles.commentIcon}>💬</Text>
-                  <Text style={styles.statText}>37</Text>
-                </View>
-              </View>
-
-              {/* Przycisk obserwacji */}
-              <TouchableOpacity
-                onPress={toggleFollow}
-                style={styles.followButton}
-              >
-                <Text style={styles.followButtonText}>
-                  {following ? 'Obserwujesz' : 'Obserwuj'}
-                </Text>
-              </TouchableOpacity>
+      {loadingPosts ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#666" />
+        </View>
+      ) : (
+        <FlatList
+          style={styles.feedContainer}
+          data={posts}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPost}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Brak postów</Text>
             </View>
-          </Card>
-        </TouchableOpacity>
-      </ScrollView>
+          }
+        />
+      )}
+      <FAB
+        icon="plus"
+        label="Add"
+        style={styles.fab}
+        onPress={handleAddPost}
+      />
     </SafeAreaView>
   );
 };
@@ -266,6 +333,8 @@ const styles = StyleSheet.create({
   feedContainer: { flex: 1 },
   postCard: { margin: 16, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
   postImage: { width: '100%', height: 400, backgroundColor: '#d4f1a8', justifyContent: 'center' },
+  noImageContainer: { alignItems: 'center' },
+  noImageText: { color: '#666', fontSize: 16, fontStyle: 'italic' },
   postContent: { padding: 8 },
   postTitle: { fontSize: 20, fontWeight: '600', color: '#333', marginBottom: 8 },
   statsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
@@ -273,6 +342,9 @@ const styles = StyleSheet.create({
   heartIcon: { fontSize: 30, color: '#e74c3c' },
   commentIcon: { fontSize: 25 },
   statText: { fontSize: 14, color: '#333' },
+  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyContainer: { padding: 24, alignItems: 'center' },
+  emptyText: { color: '#666' },
   followButton: {
     marginTop: 8,
     paddingVertical: 6,
@@ -312,6 +384,12 @@ const styles = StyleSheet.create({
   },
   searchTypeButtonTextActive: {
     color: '#fff',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 30,
+    backgroundColor: '#000',
   },
 });
 
