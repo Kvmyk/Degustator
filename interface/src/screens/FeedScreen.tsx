@@ -5,14 +5,15 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  Alert
 } from 'react-native';
 import { Text, Searchbar, Chip, Card, Avatar } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
-import { API_URL } from '@env';
+
+import { useFollow } from '../hooks/useFollow'; // ← NOWY IMPORT HOOKA
 
 type FeedScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,12 +28,14 @@ const FeedScreen = ({ navigation }: Props) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [userName, setUserName] = useState<string>('');
-  const [following, setFollowing] = useState(false);
   const [searchType, setSearchType] = useState<'posts' | 'users'>('posts');
 
   // Testowy użytkownik 
-  const targetUserId = '331067d2-5cd9-4ca8-b8d3-ec621ea2649e';
+  const targetUserId = 'c8522982-83e1-4c1c-9d1f-3d98c53ab61c';
   const targetUserName = 'adam';
+
+  // Używamy nowego hooka useFollow
+  const { following, toggleFollow } = useFollow(targetUserId);
 
   const categories = ['All', 'Coffee', 'Tea', 'Wine', 'Beer', 'Juice'];
 
@@ -53,66 +56,11 @@ const FeedScreen = ({ navigation }: Props) => {
     loadUser();
   }, []);
 
-  // Sprawdzamy status obserwacji użytkownika 
-  useEffect(() => {
-    const checkFollowing = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        if (!token) return;
-
-        console.log('Checking follow status with API_URL:', API_URL);
-        const res = await fetch(
-          `${API_URL}/api/follow/is-following/${targetUserId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        const data = await res.json();
-        setFollowing(data.following);
-      } catch (error) {
-        console.error('Error checking following status:', error);
-      }
-    };
-
-    checkFollowing();
-  }, []);
-
-  const toggleFollow = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        Alert.alert('Błąd', 'Brak tokenu autoryzacyjnego. Zaloguj się ponownie.');
-        return;
-      }
-
-      const method = following ? 'DELETE' : 'POST';
-      console.log('Toggling follow with API_URL:', API_URL);
-      const res = await fetch(`${API_URL}/api/follow/${targetUserId}`, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        Alert.alert('Błąd', `Nie udało się ${following ? 'przestać obserwować' : 'obserwować'} użytkownika. ${errorData.message || ''}`);
-        return;
-      }
-
-      // Jeśli wszystko się powiodło, zmieniamy stan
-      setFollowing(!following);
-
-    } catch (error: any) {
-      console.error('Error toggling follow:', error);
-      Alert.alert('Błąd', `Wystąpił problem z siecią: ${error.message || error}`);
-    }
-  };
-
   const handlePostPress = (postId: string) => {
     navigation.navigate('PostDetail', { postId });
   };
 
   const handleSearchFocus = () => {
-    console.log('🔍 Search bar focused');
     if (searchType === 'posts') {
       navigation.navigate('SearchPosts');
     } else {
@@ -124,7 +72,11 @@ const FeedScreen = ({ navigation }: Props) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Avatar.Text size={40} label={userName ? userName.substring(0, 2).toUpperCase() : 'GU'} style={{ backgroundColor: '#ccc' }} />
+          <Avatar.Text
+            size={40}
+            label={userName ? userName.substring(0, 2).toUpperCase() : 'GU'}
+            style={{ backgroundColor: '#ccc' }}
+          />
           <Text style={styles.userName}>{userName || 'Guest'}</Text>
           <Chip style={styles.categoryChip} textStyle={styles.chipText}>
             Cocktail
@@ -232,7 +184,7 @@ const FeedScreen = ({ navigation }: Props) => {
                 </View>
               </View>
 
-              {/* Przycisk obserwacji */}
+              {/* Przycisk obserwacji z hooka */}
               <TouchableOpacity
                 onPress={toggleFollow}
                 style={styles.followButton}
