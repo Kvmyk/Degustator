@@ -5,7 +5,7 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private neo4jService: Neo4jService) {}
+  constructor(private neo4jService: Neo4jService) { }
 
   async create(createReviewDto: CreateReviewDto): Promise<any> {
     try {
