@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, HttpException, 
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { POST_CATEGORIES } from './dto/create-post.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -19,6 +20,24 @@ export class PostsController {
     @Query('sortBy') sortBy?: 'created_at' | 'avg_rating' | 'likes_count',
   ) {
     return await this.postsService.findAll({
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+      sortBy,
+    });
+  }
+
+  @Get('category')
+  async getPostsByCategory(
+    @Query('category') category: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('sortBy') sortBy?: 'created_at' | 'avg_rating' | 'likes_count',
+  ) {
+    if (!category || !(POST_CATEGORIES as unknown as string[]).includes(category)) {
+      throw new HttpException('Invalid category', HttpStatus.BAD_REQUEST);
+    }
+    return await this.postsService.findByCategory({
+      category,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
       sortBy,

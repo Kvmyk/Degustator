@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -19,6 +19,8 @@ const AddPostsScreen = ({ navigation }: Props) => {
   const [ingredients, setIngredients] = useState('');
   const [tags, setTags] = useState('');
   const [photos, setPhotos] = useState('');
+  const [recipe, setRecipe] = useState('');
+  const [category, setCategory] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -33,6 +35,18 @@ const AddPostsScreen = ({ navigation }: Props) => {
     return list.length === 0;
   }, [ingredients]);
   const isFormInvalid = isTitleInvalid || isContentInvalid || isIngredientsInvalid;
+
+  const categories = [
+    'Coffee',
+    'Tea',
+    'Wine',
+    'Beer',
+    'Juice',
+    'Mocktails',
+    'Alcoholic Cocktails',
+    'Other',
+  ];
+  const isCategoryInvalid = useMemo(() => !categories.includes(category), [category]);
 
   const parsedTags = useMemo(
     () =>
@@ -83,11 +97,10 @@ const AddPostsScreen = ({ navigation }: Props) => {
         body: JSON.stringify({
           title: title.trim(),
           content: content.trim(),
-          // Backend requires recipe: send ingredients list as a fallback
-          recipe: parsedIngredients.join(', ')
-            || 'Ingredients provided',
+          recipe: recipe.trim() || parsedIngredients.join(', ') || 'Recipe not provided',
           photos: photosArray,
           userId,
+          category: category || 'Other',
           // tagIds and ingredientIds are optional and require UUIDs; skipping here
         }),
       });
@@ -169,6 +182,8 @@ const AddPostsScreen = ({ navigation }: Props) => {
       setTags('');
       setIngredients('');
       setPhotos('');
+      setRecipe('');
+      setCategory('');
 
       // Optionally navigate back or to feed
       navigation.goBack();
@@ -190,8 +205,26 @@ const AddPostsScreen = ({ navigation }: Props) => {
         </View>
 
         <View style={styles.content}>
-          <Card style={styles.card}>
-            <Card.Content>
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <Card style={styles.card}>
+              <Card.Content>
+              <Text style={styles.sectionLabel}>Category</Text>
+              <View style={styles.categoryRow}>
+                {categories.map(c => (
+                  <Button
+                    key={c}
+                    mode={category === c ? 'contained' : 'outlined'}
+                    style={styles.categoryChip}
+                    onPress={() => setCategory(c)}
+                    disabled={submitting}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </View>
+              <HelperText type="error" visible={isCategoryInvalid}>
+                Please select a category
+              </HelperText>
               <TextInput
                 label="Title"
                 value={title}
@@ -230,6 +263,9 @@ const AddPostsScreen = ({ navigation }: Props) => {
               <HelperText type="error" visible={isIngredientsInvalid}>
                 Provide at least one ingredient
               </HelperText>
+              {parsedIngredients.length > 0 && (
+                <Text style={styles.tagsPreview}>Ingredients: {parsedIngredients.join(' • ')}</Text>
+              )}
 
               <TextInput
                 label="Tags (comma separated)"
@@ -246,6 +282,18 @@ const AddPostsScreen = ({ navigation }: Props) => {
               )}
 
               <TextInput
+                label="Recipe"
+                value={recipe}
+                onChangeText={setRecipe}
+                mode="outlined"
+                style={styles.input}
+                multiline
+                numberOfLines={5}
+                placeholder="Describe preparation steps..."
+                disabled={submitting}
+              />
+
+              <TextInput
                 label="Photo URLs (comma separated)"
                 value={photos}
                 onChangeText={setPhotos}
@@ -255,21 +303,22 @@ const AddPostsScreen = ({ navigation }: Props) => {
                 disabled={submitting}
               />
 
-              <View style={styles.actions}>
-                <Button mode="text" onPress={() => navigation.goBack()} disabled={submitting}>
-                  Cancel
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={handleSubmit}
-                  loading={submitting}
-                  disabled={isFormInvalid || submitting}
-                >
-                  Add Post
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
+                <View style={styles.actions}>
+                  <Button mode="text" onPress={() => navigation.goBack()} disabled={submitting}>
+                    Cancel
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={handleSubmit}
+                    loading={submitting}
+                    disabled={isFormInvalid || isCategoryInvalid || submitting}
+                  >
+                    Add Post
+                  </Button>
+                </View>
+              </Card.Content>
+            </Card>
+          </ScrollView>
         </View>
 
         <Snackbar visible={!!error} onDismiss={() => setError(null)} duration={4000}>
@@ -289,10 +338,14 @@ const styles = StyleSheet.create({
   header: { padding: 16, backgroundColor: '#fff' },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },
   content: { padding: 12, flex: 1 },
+  scrollContent: { paddingBottom: 24 },
   card: { flex: 1 },
   input: { marginTop: 12 },
   actions: { marginTop: 16, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   tagsPreview: { marginTop: 8, color: '#666' },
+  sectionLabel: { marginTop: 12, fontWeight: '600' },
+  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  categoryChip: { marginRight: 8, marginBottom: 8 },
 });
 
 export default AddPostsScreen;

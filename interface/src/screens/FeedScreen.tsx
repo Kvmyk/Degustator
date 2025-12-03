@@ -290,6 +290,17 @@ const FeedScreen = ({ navigation }: Props) => {
         )}
         <View style={styles.postContent}>
           <Text style={styles.postTitle}>{item.title}</Text>
+          {item.author?.name ? (
+            <View style={styles.postAuthorRow}>
+              <Avatar.Text
+                size={24}
+                label={item.author.name.substring(0,2).toUpperCase()}
+                style={styles.postAuthorAvatar}
+                color="#fff"
+              />
+              <Text style={styles.postAuthorName}>by {item.author.name}</Text>
+            </View>
+          ) : null}
           {/* Content excerpt: first 50 characters */}
           {item.content ? (
             <Text style={styles.postExcerpt}>
@@ -467,6 +478,9 @@ const styles = StyleSheet.create({
   noImageText: { color: '#666', fontSize: 16, fontStyle: 'italic' },
   postContent: { padding: 8 },
   postTitle: { fontSize: 20, fontWeight: '600', color: '#333', marginBottom: 8 },
+  postAuthorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  postAuthorAvatar: { backgroundColor: '#ccc' },
+  postAuthorName: { fontSize: 12, color: '#666' },
   postExcerpt: { fontSize: 14, color: '#555', marginBottom: 6 },
   postTags: { fontSize: 12, color: '#777', marginBottom: 10 },
   statsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },

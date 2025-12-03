@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { Neo4jService } from '../../db/neo4j.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { POST_CATEGORIES } from './dto/create-post.dto';
 
 @Injectable()
 export class PostsService {
@@ -17,6 +18,7 @@ export class PostsService {
           content: $content,
           recipe: $recipe,
           photos: $photos,
+          category: $category,
           avg_rating: 0,
           likes_count: 0,
           created_at: datetime()
@@ -31,6 +33,7 @@ export class PostsService {
         content: createPostDto.content,
         recipe: createPostDto.recipe,
         photos: createPostDto.photos || [],
+        category: createPostDto.category,
       });
 
       if (result.length === 0) {
@@ -55,17 +58,53 @@ export class PostsService {
 
       const query = `
         MATCH (p:Post)
-        RETURN p
+        OPTIONAL MATCH (u:User)-[:CREATED]->(p)
+        RETURN p, u AS author
         ORDER BY p.${sortBy} DESC
         SKIP $offset
         LIMIT $limit
       `;
 
       const result = await this.neo4jService.read(query, { limit, offset });
-      return result.map(r => r.p.properties);
+      return result.map(r => ({
+        ...r.p.properties,
+        author: r.author?.properties,
+      }));
     } catch (error) {
       console.error('Error in findAll:', error);
       throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
+    }
+  }
+
+  async findByCategory(options: { category: string; limit?: number; offset?: number; sortBy?: string }): Promise<any[]> {
+    try {
+      const { category } = options;
+      if (!category || !(POST_CATEGORIES as unknown as string[]).includes(category)) {
+        throw new BadRequestException('Invalid category');
+      }
+
+      const limit = options.limit || 20;
+      const offset = options.offset || 0;
+      const validSortFields = ['created_at', 'avg_rating', 'likes_count'];
+      const sortBy = validSortFields.includes(options.sortBy) ? options.sortBy : 'created_at';
+
+      const query = `
+        MATCH (p:Post { category: $category })
+        OPTIONAL MATCH (u:User)-[:CREATED]->(p)
+        RETURN p, u AS author
+        ORDER BY p.${sortBy} DESC
+        SKIP $offset
+        LIMIT $limit
+      `;
+
+      const result = await this.neo4jService.read(query, { category, limit, offset });
+      return result.map(r => ({
+        ...r.p.properties,
+        author: r.author?.properties,
+      }));
+    } catch (error) {
+      console.error('Error in findByCategory:', error);
+      throw new BadRequestException(`Failed to fetch posts by category: ${error.message}`);
     }
   }
 
