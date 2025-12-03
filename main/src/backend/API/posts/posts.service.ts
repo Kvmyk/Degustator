@@ -138,11 +138,9 @@ export class PostsService {
     try {
       const query = `
         MATCH (u:User { id: $userId }), (p:Post { id: $postId })
-        MERGE (u)-[:LIKES]->(p)
-        WITH p
-        MATCH (p)<-[:LIKES]-(likedBy:User)
-        SET p.likes_count = count(likedBy)
-        RETURN p
+        MERGE (u)-[r:LIKES]->(p)
+        ON CREATE SET p.likes_count = p.likes_count + 1
+        RETURN p;
       `;
 
       const result = await this.neo4jService.write(query, { postId, userId });
@@ -162,10 +160,8 @@ export class PostsService {
       const query = `
         MATCH (u:User { id: $userId })-[r:LIKES]->(p:Post { id: $postId })
         DELETE r
-        WITH p
-        MATCH (p)<-[:LIKES]-(likedBy:User)
-        SET p.likes_count = count(likedBy)
-        RETURN p
+        SET p.likes_count = p.likes_count - 1
+        RETURN p;
       `;
 
       const result = await this.neo4jService.write(query, { postId, userId });
@@ -178,6 +174,18 @@ export class PostsService {
     } catch (error) {
       throw new BadRequestException(`Failed to unlike post: ${error.message}`);
     }
+  }
+
+  async isLiked(postId: string, userId: string): Promise<boolean> {
+    const query = `
+      MATCH (u:User { id: $userId }), (p:Post { id: $postId })
+      RETURN EXISTS((u)-[:LIKES]->(p)) AS liked
+    `;
+    const result = await this.neo4jService.read(query, { postId, userId });
+    if (!result || result.length === 0 || typeof result[0].liked === 'undefined') {
+      return false;
+    }
+    return !!result[0].liked;
   }
 
   async getReviews(postId: string): Promise<any[]> {
@@ -195,6 +203,16 @@ export class PostsService {
       author: r.author?.properties,
     }));
   }
+  
+  async getReviewsCount(postId: string): Promise<number> {
+    const query = `
+      MATCH (p:Post { id: $postId })<-[:REVIEWED]-(r:Review)
+      RETURN count(r) as reviewCount
+    `;
+    const result = await this.neo4jService.read(query, { postId });
+    return result[0].reviewCount.toNumber();
+  }
+
 
   async getTags(postId: string): Promise<any[]> {
     const query = `

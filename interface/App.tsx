@@ -11,6 +11,7 @@ import PostDetailScreen from './src/screens/PostDetailScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPassword';
 import SearchPostsScreen from './src/screens/SearchPostsScreen';
 import SearchUsersScreen from './src/screens/SearchUsersScreen';
+import AddPostsScreen from './src/screens/AddPostsScreen';
 
 export type RootStackParamList = {
   Register: undefined;
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   SearchPosts: undefined;
   SearchUsers: undefined;
+  AddPost: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -54,6 +56,11 @@ function App() {
             <Stack.Screen 
               name="SearchUsers" 
               component={SearchUsersScreen}
+              options={{ animationEnabled: true }}
+            />
+            <Stack.Screen 
+              name="AddPost" 
+              component={AddPostsScreen}
               options={{ animationEnabled: true }}
             />
           </Stack.Navigator>
