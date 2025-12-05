@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert } from 'react-native';
+import { API_URL } from '@env';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -29,39 +30,42 @@ const RegisterScreen = ({ navigation }: Props) => {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleRegister = async () => {
-  if (!name || !email || !password || !confirmPassword) {
-    Alert.alert('Błąd', 'Wypełnij wszystkie pola');
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    Alert.alert('Błąd', 'Hasła nie są takie same');
-    return;
-  }
-
-  try {
-    const res = await fetch('http://192.168.0.102:3001/api/auth/register', // ⚠️ Podmień na IP swojego komputera
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      Alert.alert('Rejestracja nieudana', data.message || 'Spróbuj ponownie');
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert('Błąd', 'Wypełnij wszystkie pola');
       return;
     }
 
-    Alert.alert('Sukces', 'Konto zostało utworzone! Możesz się zalogować.');
-    navigation.replace('Login');
-  } catch (error) {
-    console.error('Register error:', error);
-    Alert.alert('Błąd', 'Nie udało się połączyć z serwerem');
-  }
-};
+    if (password !== confirmPassword) {
+      Alert.alert('Błąd', 'Hasła nie są takie same');
+      return;
+    }
 
+    try {
+      console.log('Attempting register with API_URL:', API_URL);
+      const res = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Handle both string and array message formats
+        const errorMessage = Array.isArray(data.message)
+          ? data.message.join('\n')
+          : (data.message || 'Spróbuj ponownie');
+        Alert.alert('Rejestracja nieudana', errorMessage);
+        return;
+      }
+
+      Alert.alert('Sukces', 'Konto zostało utworzone! Możesz się zalogować.');
+      navigation.replace('Login');
+    } catch (error) {
+      console.error('Register error:', error);
+      Alert.alert('Błąd', 'Nie udało się połączyć z serwerem');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -153,10 +157,47 @@ const RegisterScreen = ({ navigation }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  // ... existing styles ...
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  formContainer: {
+    width: '100%',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: '#fff',
+  },
   registerButton: {
     borderRadius: 8,
-    marginTop: 16,
+    marginTop: 24,
   },
   registerButtonContent: {
     paddingVertical: 8,

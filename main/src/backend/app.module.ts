@@ -7,7 +7,9 @@ import { PostsModule } from './API/posts/posts.module';
 import { ReviewsModule } from './API/reviews/reviews.module';
 import { TagsModule } from './API/tags/tags.module';
 import { IngredientsModule } from './API/ingredients/ingredients.module';
-import { AuthModule } from './API/login/auth.module';
+import { AuthModule } from './API/auth/auth.module';
+import { FollowModule } from './API/follow/follow.module';
+import { SearchModule } from './API/search/search.module';  
 
 @Module({
   imports: [
@@ -18,7 +20,9 @@ import { AuthModule } from './API/login/auth.module';
     ReviewsModule,
     TagsModule,
     IngredientsModule,
-    AuthModule
+    AuthModule,
+    FollowModule,
+    SearchModule
   ],
   controllers: [ApiController],
   providers: [],

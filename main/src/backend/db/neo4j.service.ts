@@ -10,9 +10,9 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {}
 
   onModuleInit() {
-    const uri = this.configService.get<string>('NEO4J_URI') || 'neo4j://localhost:7687';
-    const username = this.configService.get<string>('NEO4J_USERNAME') || 'neo4j';
-    const password = this.configService.get<string>('NEO4J_PASSWORD') || 'password';
+    const uri = this.configService.get<string>('NEO4J_URI');
+    const username = this.configService.get<string>('NEO4J_USERNAME');
+    const password = this.configService.get<string>('NEO4J_PASSWORD');
 
     try {
       this.driver = neo4j.driver(uri, neo4j.auth.basic(username, password));

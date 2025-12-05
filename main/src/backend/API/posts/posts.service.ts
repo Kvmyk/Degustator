@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { Neo4jService } from '../../db/neo4j.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { POST_CATEGORIES } from './dto/create-post.dto';
 
 @Injectable()
 export class PostsService {
@@ -17,6 +18,7 @@ export class PostsService {
           content: $content,
           recipe: $recipe,
           photos: $photos,
+          category: $category,
           avg_rating: 0,
           likes_count: 0,
           created_at: datetime()
@@ -31,6 +33,7 @@ export class PostsService {
         content: createPostDto.content,
         recipe: createPostDto.recipe,
         photos: createPostDto.photos || [],
+        category: createPostDto.category,
       });
 
       if (result.length === 0) {
@@ -55,17 +58,53 @@ export class PostsService {
 
       const query = `
         MATCH (p:Post)
-        RETURN p
+        OPTIONAL MATCH (u:User)-[:CREATED]->(p)
+        RETURN p, u AS author
         ORDER BY p.${sortBy} DESC
         SKIP $offset
         LIMIT $limit
       `;
 
       const result = await this.neo4jService.read(query, { limit, offset });
-      return result.map(r => r.p.properties);
+      return result.map(r => ({
+        ...r.p.properties,
+        author: r.author?.properties,
+      }));
     } catch (error) {
       console.error('Error in findAll:', error);
       throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
+    }
+  }
+
+  async findByCategory(options: { category: string; limit?: number; offset?: number; sortBy?: string }): Promise<any[]> {
+    try {
+      const { category } = options;
+      if (!category || !(POST_CATEGORIES as unknown as string[]).includes(category)) {
+        throw new BadRequestException('Invalid category');
+      }
+
+      const limit = options.limit || 20;
+      const offset = options.offset || 0;
+      const validSortFields = ['created_at', 'avg_rating', 'likes_count'];
+      const sortBy = validSortFields.includes(options.sortBy) ? options.sortBy : 'created_at';
+
+      const query = `
+        MATCH (p:Post { category: $category })
+        OPTIONAL MATCH (u:User)-[:CREATED]->(p)
+        RETURN p, u AS author
+        ORDER BY p.${sortBy} DESC
+        SKIP $offset
+        LIMIT $limit
+      `;
+
+      const result = await this.neo4jService.read(query, { category, limit, offset });
+      return result.map(r => ({
+        ...r.p.properties,
+        author: r.author?.properties,
+      }));
+    } catch (error) {
+      console.error('Error in findByCategory:', error);
+      throw new BadRequestException(`Failed to fetch posts by category: ${error.message}`);
     }
   }
 
@@ -138,11 +177,9 @@ export class PostsService {
     try {
       const query = `
         MATCH (u:User { id: $userId }), (p:Post { id: $postId })
-        MERGE (u)-[:LIKES]->(p)
-        WITH p
-        MATCH (p)<-[:LIKES]-(likedBy:User)
-        SET p.likes_count = count(likedBy)
-        RETURN p
+        MERGE (u)-[r:LIKES]->(p)
+        ON CREATE SET p.likes_count = p.likes_count + 1
+        RETURN p;
       `;
 
       const result = await this.neo4jService.write(query, { postId, userId });
@@ -162,10 +199,8 @@ export class PostsService {
       const query = `
         MATCH (u:User { id: $userId })-[r:LIKES]->(p:Post { id: $postId })
         DELETE r
-        WITH p
-        MATCH (p)<-[:LIKES]-(likedBy:User)
-        SET p.likes_count = count(likedBy)
-        RETURN p
+        SET p.likes_count = p.likes_count - 1
+        RETURN p;
       `;
 
       const result = await this.neo4jService.write(query, { postId, userId });
@@ -178,6 +213,18 @@ export class PostsService {
     } catch (error) {
       throw new BadRequestException(`Failed to unlike post: ${error.message}`);
     }
+  }
+
+  async isLiked(postId: string, userId: string): Promise<boolean> {
+    const query = `
+      MATCH (u:User { id: $userId }), (p:Post { id: $postId })
+      RETURN EXISTS((u)-[:LIKES]->(p)) AS liked
+    `;
+    const result = await this.neo4jService.read(query, { postId, userId });
+    if (!result || result.length === 0 || typeof result[0].liked === 'undefined') {
+      return false;
+    }
+    return !!result[0].liked;
   }
 
   async getReviews(postId: string): Promise<any[]> {
@@ -195,6 +242,16 @@ export class PostsService {
       author: r.author?.properties,
     }));
   }
+  
+  async getReviewsCount(postId: string): Promise<number> {
+    const query = `
+      MATCH (p:Post { id: $postId })<-[:REVIEWED]-(r:Review)
+      RETURN count(r) as reviewCount
+    `;
+    const result = await this.neo4jService.read(query, { postId });
+    return result[0].reviewCount.toNumber();
+  }
+
 
   async getTags(postId: string): Promise<any[]> {
     const query = `

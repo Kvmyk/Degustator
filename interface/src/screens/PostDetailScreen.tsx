@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { Text, Divider, Avatar } from 'react-native-paper';
+import { Text, Divider, Avatar, TextInput } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
 
 type PostDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -25,111 +29,317 @@ type Props = {
 };
 
 const PostDetailScreen = ({ navigation, route }: Props) => {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(21);
+  const { postId } = route.params;
+  const [post, setPost] = useState<any | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [liked, setLiked] = useState<boolean>(false);
+  const [likeCount, setLikeCount] = useState<number>(0);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState<string>('');
+  const [newRating, setNewRating] = useState<number>(0);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
 
-  const handleLike = () => {
-    setLiked(!liked);
-    setLikeCount(liked ? likeCount - 1 : likeCount + 1);
+  const toNumber = (v: any) =>
+    v && typeof v === 'object' && 'low' in v ? v.low : typeof v === 'number' ? v : 0;
+
+  const avgRating = useMemo(() => toNumber(post?.avg_rating ?? 0), [post]);
+  // Reviews are fetched from dedicated endpoint to include authors
+
+  const fetchPost = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      const userData = await AsyncStorage.getItem('user');
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_URL}/api/posts/${postId}`, { headers });
+      if (!res.ok) throw new Error(`Failed to load post: ${res.status}`);
+      const data = await res.json();
+      setPost(data);
+      setLikeCount(toNumber(data.likes_count));
+      // fetch reviews with authors
+      try {
+        const rv = await fetch(`${API_URL}/api/reviews/post/${postId}`, { headers });
+        if (rv.ok) {
+          const rvData = await rv.json().catch(() => []);
+          const list = Array.isArray(rvData) ? rvData : [];
+          const normalized = list.map((item: any) => ({
+            ...item,
+            rating: toNumber(item?.rating),
+          }));
+          setReviews(normalized);
+        } else {
+          setReviews([]);
+        }
+      } catch {
+        setReviews([]);
+      }
+
+      // hydrate liked status for current user if known
+      try {
+        const uid = userData ? JSON.parse(userData)?.id : undefined;
+        setCurrentUserId(uid);
+        if (uid) {
+          const ls = await fetch(
+            `${API_URL}/api/posts/${postId}/like/status?userId=${encodeURIComponent(uid)}`,
+            { headers }
+          );
+          if (ls.ok) {
+            const payload = await ls.json().catch(() => null);
+            setLiked(!!(payload && payload.liked));
+          }
+        }
+      } catch {}
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert('Błąd', e.message || 'Nie udało się wczytać posta');
+    } finally {
+      setLoading(false);
+    }
+  }, [postId]);
+
+  useEffect(() => {
+    fetchPost();
+  }, [fetchPost]);
+
+  const handleLike = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userData = await AsyncStorage.getItem('user');
+      if (!token || !userData) {
+        Alert.alert('Błąd', 'Brak tokenu lub użytkownika. Zaloguj się ponownie.');
+        return;
+      }
+      const user = JSON.parse(userData);
+      const method = liked ? 'DELETE' : 'POST';
+
+      const res = await fetch(`${API_URL}/api/posts/${postId}/like`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        Alert.alert('Błąd', err.message || 'Nie udało się zaktualizować polubienia');
+        return;
+      }
+
+      setLiked(!liked);
+      setLikeCount((c) => (liked ? Math.max(0, c - 1) : c + 1));
+    } catch (e: any) {
+      console.error('Like toggle error:', e);
+      Alert.alert('Błąd', e.message || 'Wystąpił problem z siecią');
+    }
+  };
+
+  const submitReview = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userData = await AsyncStorage.getItem('user');
+      if (!token || !userData) {
+        Alert.alert('Błąd', 'Brak tokenu lub użytkownika. Zaloguj się ponownie.');
+        return;
+      }
+      const user = JSON.parse(userData);
+      const content = newComment.trim();
+      const rating = Math.max(0, Math.min(5, Number(newRating)));
+      if (!content) {
+        Alert.alert('Uwaga', 'Wpisz treść recenzji.');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id, postId, content, rating }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        Alert.alert('Błąd', err.message || 'Nie udało się dodać recenzji');
+        return;
+      }
+
+      await fetchPost();
+      setNewComment('');
+      setNewRating(0);
+    } catch (e: any) {
+      console.error('Add review error:', e);
+      Alert.alert('Błąd', e.message || 'Wystąpił problem z siecią');
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView}>
-        <Image
-          source={require('../assets/gonster.png')}
-          style={styles.headerImage}
-          resizeMode="cover"
-        />
-
-        <View style={styles.contentContainer}>
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>Gonster</Text>
-            <View style={styles.headerActions}>
-              <TouchableOpacity onPress={handleLike}>
-                <Text style={[styles.icon, liked && styles.likedIcon]}>
-                  {liked ? '♥' : '♡'}
-                </Text>
-              </TouchableOpacity>
-              <Text style={styles.icon}>💬</Text>
-            </View>
-          </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.heartIcon}>{liked ? '♥' : '♡'}</Text>
-              <Text style={styles.statNumber}>{likeCount}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.commentIcon}>💬</Text>
-              <Text style={styles.statNumber}>37</Text>
-            </View>
-          </View>
-
-          <View style={styles.ratingContainer}>
-            <Text style={styles.stars}>★★★★☆</Text>
-          </View>
-
-          <View style={styles.tagsContainer}>
-            <Text style={styles.tag}>#beer</Text>
-            <Text style={styles.tag}>#energy</Text>
-            <Text style={styles.tag}>#relax</Text>
-            <Text style={styles.tag}>#morningdrink</Text>
-            <View style={styles.bookmarkBadge}>
-              <Text style={styles.bookmarkNumber}>2</Text>
-              <Text style={styles.bookmarkIcon}>🔖</Text>
-            </View>
-          </View>
-
-          <Text style={styles.description}>
-            Very delicious drink i made today. The taste of monster nitro and
-            cold guiness combined taste really awesome! Can get enogh of it -
-            perfect mix of both energy and relaxation in the morning!
-          </Text>
-
-          <Text style={styles.ingredientsTitle}>Ingredients:</Text>
-          <Text style={styles.ingredients}>
-            Half a can of a cold monster nitro poured into the same glass slowly
-            with half a pint of stone cold guiness. Voila!
-          </Text>
-
-          <Divider style={styles.divider} />
-
-          <Text style={styles.commentsTitle}>Comments</Text>
-
-          <View style={styles.commentItem}>
-            <Avatar.Icon
-              size={40}
-              icon="account"
-              style={styles.avatar}
-              color="#999"
-            />
-            <View style={styles.commentContent}>
-              <Text style={styles.commentAuthor}>John Mcafee</Text>
-              <Text style={styles.commentText}>Splendid.</Text>
-            </View>
-            <TouchableOpacity>
-              <Text style={styles.heartIcon}>♡</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.commentItem}>
-            <Avatar.Icon
-              size={40}
-              icon="account"
-              style={styles.avatar}
-              color="#999"
-            />
-            <View style={styles.commentContent}>
-              <Text style={styles.commentAuthor}>Terry Davis</Text>
-              <Text style={styles.commentText}>Divine intellect!</Text>
-            </View>
-            <TouchableOpacity>
-              <Text style={styles.heartIcon}>♡</Text>
-            </TouchableOpacity>
-          </View>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#666" />
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView style={styles.scrollView}>
+          {post && Array.isArray(post.photos) && post.photos.length > 0 ? (
+            <Image source={{ uri: post.photos[0] }} style={styles.headerImage} resizeMode="cover" />
+          ) : (
+            <Image
+              source={require('../assets/gonster.png')}
+              style={styles.headerImage}
+              resizeMode="cover"
+            />
+          )}
+
+          <View style={styles.contentContainer}>
+            <View style={styles.headerRow}>
+              <Text style={styles.title}>{post?.title || 'Post'}</Text>
+              <View style={styles.headerActions}>
+                <TouchableOpacity onPress={handleLike}>
+                  <Text style={[styles.icon, liked && styles.likedIcon]}>
+                    {liked ? '♥' : '♡'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.icon}>💬</Text>
+              </View>
+            </View>
+            {post?.author?.name ? (
+              <View style={styles.authorRow}>
+                <Avatar.Text
+                  size={32}
+                  label={(post.author.name || 'GU').substring(0, 2).toUpperCase()}
+                  style={styles.authorAvatar}
+                  color="#fff"
+                />
+                <Text style={styles.authorName}>by {post.author.name}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text style={liked ? styles.heartIconLiked : styles.heartIcon}>{liked ? '♥' : '♡'}</Text>
+                <Text style={styles.statNumber}>{likeCount}</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.commentIcon}>💬</Text>
+                <Text style={styles.statNumber}>{Array.isArray(reviews) ? reviews.length : 0}</Text>
+              </View>
+              <View style={[styles.stat, styles.rightStat, styles.ratingPill]}>
+                <Text style={styles.starIcon}>⭐</Text>
+                <Text style={styles.ratingText}>{Number.isFinite(avgRating) ? avgRating.toFixed(1) : '0.0'}</Text>
+              </View>
+            </View>
+
+            {/* Rating stars removed in favor of numeric badge like Feed */}
+
+            <View style={styles.tagsContainer}>
+              {Array.isArray(post?.tags)
+                ? post!.tags
+                    .map((t: any) => t?.name || t?.properties?.name || '')
+                    .filter(Boolean)
+                    .slice(0, 10)
+                    .map((name: string) => (
+                      <Text style={styles.tag} key={`tag-${name}`}>#{name}</Text>
+                    ))
+                : null}
+              <View style={styles.bookmarkBadge}>
+                <Text style={styles.bookmarkNumber}>{toNumber(post?.likes_count || 0)}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.description}>{post?.content || ''}</Text>
+
+            <Text style={styles.ingredientsTitle}>Ingredients:</Text>
+            <Text style={styles.ingredients}>
+              {Array.isArray(post?.ingredients)
+                ? post!.ingredients
+                    .map((i: any) => i?.name || i?.properties?.name || '')
+                    .filter(Boolean)
+                    .join(', ')
+                : ''}
+            </Text>
+
+            <Text style={styles.ingredientsTitle}>Sposób przygotowania:</Text>
+            <Text style={styles.ingredients}>{post?.recipe || ''}</Text>
+
+            <Divider style={styles.divider} />
+
+            <Text style={styles.commentsTitle}>Reviews</Text>
+
+            {Array.isArray(reviews) && reviews.length > 0 ? (
+              reviews.map((r: any, idx: number) => (
+                <View style={styles.commentItem} key={`rev-${idx}`}>
+                  <Avatar.Text
+                    size={40}
+                    label={(r?.author?.name || 'GU').substring(0, 2).toUpperCase()}
+                    style={styles.avatar}
+                    color="#fff"
+                  />
+                  <View style={styles.commentContent}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={styles.commentAuthor}>{r?.author?.name || 'Guest'}</Text>
+                      <View style={[styles.stat, styles.ratingPill]}>
+                        <Text style={styles.starIcon}>⭐</Text>
+                        <Text style={styles.ratingText}>{typeof r?.rating === 'number' ? r.rating.toFixed(1) : String(r?.rating ?? '0')}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.commentText}>{r?.content || ''}</Text>
+                  </View>
+                  <TouchableOpacity>
+                    <Text style={styles.heartIcon}>♡</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: '#666' }}>No comments yet</Text>
+            )}
+
+            {/* Add new review (only if user hasn't reviewed yet and is not the author) */}
+            {(() => {
+              // Block form if current user is the author or already reviewed
+              const isAuthor = !!(post?.author?.id && currentUserId && post.author.id === currentUserId);
+              const reviewed = Array.isArray(reviews) && currentUserId
+                ? reviews.some((r) => !!r?.author?.id && r.author.id === currentUserId)
+                : false;
+              if (isAuthor || reviewed) return null;
+              return (
+                <View style={styles.addCommentBox}>
+                  <Text style={styles.addCommentLabel}>Your rating (0-5): {newRating}</Text>
+                  <View style={styles.ratingButtonsRow}>
+                    {[0,1,2,3,4,5].map((n) => (
+                      <TouchableOpacity key={`rate-${n}`} onPress={() => setNewRating(n)}>
+                        <Text style={[styles.rateButton, newRating === n && styles.rateButtonActive]}>{n}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View style={styles.commentInputRow}>
+                    <Text style={styles.commentInputLabel}>Review:</Text>
+                    <TextInput
+                      mode="outlined"
+                      value={newComment}
+                      onChangeText={setNewComment}
+                      placeholder="Write a review..."
+                      multiline
+                      numberOfLines={3}
+                      style={styles.commentInputTextInput}
+                    />
+                  </View>
+                  <View style={styles.addActionsRow}>
+                    <TouchableOpacity onPress={() => setNewComment('')}>
+                      <Text style={styles.clearButton}>Clear</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={submitReview}>
+                      <Text style={styles.sendButton}>Add Review</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -165,18 +375,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  authorAvatar: {
+    backgroundColor: '#cfcfcf',
+  },
+  authorName: {
+    fontSize: 14,
+    color: '#666',
+  },
   icon: {
     fontSize: 24,
     color: '#666',
   },
   likedIcon: {
     color: '#e74c3c',
+    fontSize: 30,
   },
   statsRow: {
     flexDirection: 'row',
     gap: 16,
     marginBottom: 12,
   },
+  rightStat: { marginLeft: 'auto' },
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -186,9 +411,23 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#e74c3c',
   },
+  heartIconLiked: {
+    fontSize: 26,
+    color: '#e74c3c',
+  },
   commentIcon: {
     fontSize: 18,
   },
+  ratingPill: {
+    backgroundColor: '#fff7df',
+    borderWidth: 1,
+    borderColor: '#ffe4a1',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  starIcon: { fontSize: 18, color: '#f1c40f' },
+  ratingText: { fontSize: 13, color: '#8a6d3b', fontWeight: '600' },
   statNumber: {
     fontSize: 14,
     color: '#333',
@@ -274,6 +513,64 @@ const styles = StyleSheet.create({
   commentText: {
     fontSize: 14,
     color: '#666',
+  },
+  addCommentBox: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  addCommentLabel: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+  },
+  ratingButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  rateButton: {
+    fontSize: 14,
+    color: '#555',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+  rateButtonActive: {
+    color: '#8a6d3b',
+    borderColor: '#ffe4a1',
+    backgroundColor: '#fff7df',
+  },
+  commentInputRow: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  commentInputLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  commentInputTextInput: {
+    backgroundColor: '#fff',
+  },
+  addActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  clearButton: {
+    fontSize: 14,
+    color: '#e74c3c',
+  },
+  sendButton: {
+    fontSize: 14,
+    color: '#1f7a1f',
+    fontWeight: '600',
   },
 });
 
