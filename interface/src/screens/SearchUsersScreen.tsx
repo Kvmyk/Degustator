@@ -23,9 +23,9 @@ type Props = {
 // ---------------------------------------------
 //  COMPONENT USER ITEM (BEZ FOLLOW)
 // ---------------------------------------------
-const UserItem = ({ user }: { user: any }) => {
+const UserItem = ({ user, onPress }: { user: any; onPress: () => void }) => {
   return (
-    <Card style={styles.card}>
+    <Card style={styles.card} onPress={onPress}>
       <Card.Content>
         <View style={styles.userContent}>
           <Avatar.Image
@@ -101,7 +101,12 @@ const SearchUsersScreen = ({ navigation }: Props) => {
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <UserItem user={item} />}
+        renderItem={({ item }) => (
+          <UserItem 
+            user={item}
+            onPress={() => navigation.navigate('UserProfile', { userId: item.id })}
+          />
+        )}
         contentContainerStyle={styles.listContent}
         scrollEnabled={results.length > 0}
       />

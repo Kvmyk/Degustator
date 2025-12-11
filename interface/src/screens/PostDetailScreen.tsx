@@ -116,6 +116,12 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
     fetchPost();
   }, [fetchPost]);
 
+  const openAuthorProfile = useCallback(() => {
+    if (post?.author?.id) {
+      navigation.navigate('UserProfile', { userId: post.author.id });
+    }
+  }, [navigation, post?.author?.id]);
+
   const handleLike = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -224,6 +230,13 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
         </View>
       ) : (
         <ScrollView style={styles.scrollView}>
+          <View style={styles.topBar}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.topBarTitle}>Post</Text>
+            <View style={{ width: 24 }} />
+          </View>
           {post && Array.isArray(post.photos) && post.photos.length > 0 ? (
             <Image source={{ uri: post.photos[0] }} style={styles.headerImage} resizeMode="cover" />
           ) : (
@@ -248,13 +261,17 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
             </View>
             {post?.author?.name ? (
               <View style={styles.authorRow}>
-                <Avatar.Text
-                  size={32}
-                  label={(post.author.name || 'GU').substring(0, 2).toUpperCase()}
-                  style={styles.authorAvatar}
-                  color="#fff"
-                />
-                <Text style={styles.authorName}>by {post.author.name}</Text>
+                <TouchableOpacity onPress={openAuthorProfile} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Avatar.Text
+                    size={32}
+                    label={(post.author.name || 'GU').substring(0, 2).toUpperCase()}
+                    style={styles.authorAvatar}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={openAuthorProfile} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.authorName}>by {post.author.name}</Text>
+                </TouchableOpacity>
 
                 {/* 🔹 Follow button */}
                 {post.author.id !== currentUserId && (
@@ -413,6 +430,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  topBar: { height: 50, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  backArrow: { fontSize: 22, color: '#333', paddingRight: 8 },
+  topBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '600', color: '#333' },
   headerImage: {
     width: '100%',
     height: 300,

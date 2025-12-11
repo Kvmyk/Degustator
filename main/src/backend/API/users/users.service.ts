@@ -109,32 +109,41 @@ export class UsersService {
 
   async getFollowers(userId: string): Promise<any[]> {
     const query = `
-      MATCH (u:User { id: $userId })<-[:FOLLOWS]-(follower:User)
-      RETURN follower
+      MATCH (u:User { id: $userId })<-[rel:FOLLOWS]-(follower:User)
+      RETURN follower, rel
+      ORDER BY rel.created_at DESC
       LIMIT 50
     `;
 
     const result = await this.neo4jService.read(query, { userId });
-    return result.map(r => this.excludePassword(r.follower.properties));
+    return result.map(r => ({
+      ...this.excludePassword(r.follower.properties),
+      followed_at: r.rel?.properties?.created_at,
+    }));
   }
 
   async getFollowing(userId: string): Promise<any[]> {
     const query = `
-      MATCH (u:User { id: $userId })-[:FOLLOWS]->(following:User)
-      RETURN following
+      MATCH (u:User { id: $userId })-[rel:FOLLOWS]->(following:User)
+      RETURN following, rel
+      ORDER BY rel.created_at DESC
       LIMIT 50
     `;
 
     const result = await this.neo4jService.read(query, { userId });
-    return result.map(r => this.excludePassword(r.following.properties));
+    return result.map(r => ({
+      ...this.excludePassword(r.following.properties),
+      followed_at: r.rel?.properties?.created_at,
+    }));
   }
 
   async followUser(userId: string, targetUserId: string): Promise<{ message: string }> {
     try {
       const query = `
         MATCH (u:User { id: $userId }), (f:User { id: $targetUserId })
-        MERGE (u)-[:FOLLOWS]->(f)
-        RETURN u, f
+        MERGE (u)-[rel:FOLLOWS]->(f)
+        ON CREATE SET rel.created_at = datetime()
+        RETURN u, f, rel
       `;
 
       await this.neo4jService.write(query, { userId, targetUserId });
@@ -173,14 +182,17 @@ export class UsersService {
 
   async getLikedPosts(userId: string): Promise<any[]> {
     const query = `
-      MATCH (u:User { id: $userId })-[:LIKES]->(p:Post)
-      RETURN p
-      ORDER BY p.created_at DESC
+      MATCH (u:User { id: $userId })-[rel:LIKES]->(p:Post)
+      RETURN p, rel
+      ORDER BY rel.created_at DESC
       LIMIT 50
     `;
 
     const result = await this.neo4jService.read(query, { userId });
-    return result.map(r => r.p.properties);
+    return result.map(r => ({
+      ...r.p.properties,
+      liked_at: r.rel?.properties?.created_at,
+    }));
   }
 
   private excludePassword(user: any): any {

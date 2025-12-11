@@ -12,7 +12,13 @@ import ForgotPasswordScreen from './src/screens/ForgotPassword';
 import SearchPostsScreen from './src/screens/SearchPostsScreen';
 import SearchUsersScreen from './src/screens/SearchUsersScreen';
 import AddPostsScreen from './src/screens/AddPostsScreen';
+import UserProfileScreen from './src/screens/UserProfileScreen';
+import EditUserProfileScreen from './src/screens/EditUserProfile';
+import FollowsListScreen from './src/screens/FollowsListScreen';
+import LikesListScreen from './src/screens/LikesListScreen';
+import ReviewListScreen from './src/screens/ReviewListScreen';
 
+// Ensure RootStackParamList includes correct params for screens that use route.params
 export type RootStackParamList = {
   Register: undefined;
   Login: undefined;
@@ -22,6 +28,11 @@ export type RootStackParamList = {
   SearchPosts: undefined;
   SearchUsers: undefined;
   AddPost: undefined;
+  UserProfile: { userId: string };
+  EditUserProfile?: undefined;
+  FollowsList: { userId: string; type: 'followers' | 'following' };
+  LikesList: { userId: string };
+  ReviewList: { userId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,33 +47,21 @@ function App() {
             initialRouteName="Login"
             screenOptions={{ 
               headerShown: false,
-              animationEnabled: true,
             }}
           >
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
             <Stack.Screen name="Feed" component={FeedScreen} />
-            <Stack.Screen 
-              name="PostDetail" 
-              component={PostDetailScreen}
-              options={{ animationEnabled: true }}
-            />
+            <Stack.Screen name="PostDetail" component={PostDetailScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-            <Stack.Screen 
-              name="SearchPosts" 
-              component={SearchPostsScreen}
-              options={{ animationEnabled: true }}
-            />
-            <Stack.Screen 
-              name="SearchUsers" 
-              component={SearchUsersScreen}
-              options={{ animationEnabled: true }}
-            />
-            <Stack.Screen 
-              name="AddPost" 
-              component={AddPostsScreen}
-              options={{ animationEnabled: true }}
-            />
+            <Stack.Screen name="SearchPosts" component={SearchPostsScreen} />
+            <Stack.Screen name="SearchUsers" component={SearchUsersScreen} />
+            <Stack.Screen name="AddPost" component={AddPostsScreen} />
+            <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
+            <Stack.Screen name="EditUserProfile" component={EditUserProfileScreen} options={{ headerShown: true, title: 'Edit Profile' }} />
+            <Stack.Screen name="FollowsList" component={FollowsListScreen} options={{ headerShown: true, title: 'Connections' }} />
+            <Stack.Screen name="LikesList" component={LikesListScreen} />
+            <Stack.Screen name="ReviewList" component={ReviewListScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>

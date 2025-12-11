@@ -249,6 +249,18 @@ const FeedScreen = ({ navigation }: Props) => {
     navigation.navigate('AddPost');
   };
 
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      setCurrentUserId(null);
+      setUserName('Guest');
+      navigation.navigate('Login');
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+  };
+
   const renderPost = ({ item }: { item: any }) => {
     const firstPhoto = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos[0] : null;
     const showFallback = !firstPhoto || imageErrors[item.id];
@@ -276,8 +288,10 @@ const FeedScreen = ({ navigation }: Props) => {
           <Text style={styles.postTitle}>{item.title}</Text>
           {item.author?.name ? (
             <View style={styles.postAuthorRow}>
-              <Avatar.Text size={24} label={item.author.name.substring(0,2).toUpperCase()} style={styles.postAuthorAvatar} color="#fff" />
-              <Text style={styles.postAuthorName}>by {item.author.name}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { userId: item.author.id })} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Avatar.Text size={24} label={item.author.name.substring(0,2).toUpperCase()} style={styles.postAuthorAvatar} color="#fff" />
+                <Text style={styles.postAuthorName}>by {item.author.name}</Text>
+              </TouchableOpacity>
               {item.author?.id !== currentUserId && (
               <TouchableOpacity
                 onPress={() => toggleFollow(item.author.id, item.__following)}
@@ -333,8 +347,13 @@ const FeedScreen = ({ navigation }: Props) => {
     <SafeAreaView style={styles.container}>
       {/* 🔹 Informacja o zalogowanym użytkowniku */}
       <View style={styles.header}>
-        <Avatar.Text size={40} label={userName.substring(0, 2).toUpperCase()} style={{ backgroundColor: '#ccc' }} />
-        <Text style={styles.userName}>{userName}</Text>
+        <TouchableOpacity onPress={() => currentUserId && navigation.navigate('UserProfile', { userId: currentUserId })} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Avatar.Text size={40} label={userName.substring(0, 2).toUpperCase()} style={{ backgroundColor: '#ccc' }} />
+          <Text style={[styles.userName, { marginLeft: 12 }]}>{userName}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 🔹 Searchbar */}
@@ -409,6 +428,8 @@ const FeedScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
+  logoutButton: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#ffefef', borderWidth: 1, borderColor: '#ffcccc' },
+  logoutText: { color: '#d32f2f', fontWeight: '600' },
   userName: { fontSize: 16, color: '#333', fontWeight: '500' },
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#e8f4f8' },
   searchBar: { elevation: 0, backgroundColor: '#e8f4f8' },
