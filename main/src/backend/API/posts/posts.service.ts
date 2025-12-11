@@ -178,8 +178,8 @@ export class PostsService {
       const query = `
         MATCH (u:User { id: $userId }), (p:Post { id: $postId })
         MERGE (u)-[r:LIKES]->(p)
-        ON CREATE SET p.likes_count = p.likes_count + 1
-        RETURN p;
+        ON CREATE SET r.created_at = datetime(), p.likes_count = p.likes_count + 1
+        RETURN p, r as likeRel;
       `;
 
       const result = await this.neo4jService.write(query, { postId, userId });
@@ -188,7 +188,9 @@ export class PostsService {
         throw new NotFoundException('Post or User not found');
       }
 
-      return result[0].p.properties;
+      const p = result[0].p.properties;
+      const rel = result[0].likeRel?.properties;
+      return { ...p, liked_at: rel?.created_at };
     } catch (error) {
       throw new BadRequestException(`Failed to like post: ${error.message}`);
     }
