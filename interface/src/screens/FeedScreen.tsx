@@ -28,12 +28,10 @@ const FeedScreen = ({ navigation }: Props) => {
   const [refreshing, setRefreshing] = useState(false);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [userName, setUserName] = useState('Guest');
-  const [following, setFollowing] = useState(false);
 
-  // Test user (for follow feature)
-  const targetUserId = '331067d2-5cd9-4ca8-b8d3-ec621ea2649e';
+  const categories = ['All', 'Coffee', 'Tea', 'Wine', 'Beer', 'Juice', 'Mocktails', 'Alcoholic Cocktails', 'Others'];
 
-  const categories = ['All', 'Coffee', 'Tea', 'Wine', 'Beer', 'Juice'];
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // 🔹 Pobranie zalogowanego użytkownika z AsyncStorage
   useEffect(() => {
@@ -42,6 +40,7 @@ const FeedScreen = ({ navigation }: Props) => {
         const userData = await AsyncStorage.getItem('user');
         if (userData) {
           const user = JSON.parse(userData);
+          setCurrentUserId(user.id);
           setUserName(user.name || 'Guest');
         }
       } catch (error) {
@@ -107,6 +106,20 @@ const FeedScreen = ({ navigation }: Props) => {
                 enriched = { ...enriched, __liked: likedFlag };
               }
             }
+            // Follow status by current user
+            if (currentUserId && enriched.author?.id && enriched.author.id !== currentUserId) {
+              const followRes = await fetch(
+                `${API_URL}/api/follow/is-following/${encodeURIComponent(enriched.author.id)}`,
+                { headers: headers2 }
+              );
+
+              if (followRes.ok) {
+                const followData = await followRes.json().catch(() => null);
+                const followingFlag = !!followData;
+
+                enriched = { ...enriched, __following: followingFlag };
+              }
+            }
             return enriched;
           } catch {
             return p;
@@ -124,48 +137,6 @@ const FeedScreen = ({ navigation }: Props) => {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
-
-  // Follow status check
-  useEffect(() => {
-    const checkFollowing = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        if (!token) return;
-        const res = await fetch(`${API_URL}/api/follow/is-following/${targetUserId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => ({ following: false }));
-        if (typeof data.following !== 'undefined') setFollowing(!!data.following);
-      } catch (error) {
-        console.error('Error checking following status:', error);
-      }
-    };
-    checkFollowing();
-  }, []);
-
-  const toggleFollow = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        Alert.alert('Błąd', 'Brak tokenu autoryzacyjnego. Zaloguj się ponownie.');
-        return;
-      }
-      const method = following ? 'DELETE' : 'POST';
-      const res = await fetch(`${API_URL}/api/follow/${targetUserId}`, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        Alert.alert('Błąd', `Nie udało się ${following ? 'przestać obserwować' : 'obserwować'} użytkownika. ${errorData.message || ''}`);
-        return;
-      }
-      setFollowing(!following);
-    } catch (error: any) {
-      console.error('Error toggling follow:', error);
-      Alert.alert('Błąd', `Wystąpił problem z siecią: ${error.message || error}`);
-    }
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -231,6 +202,36 @@ const FeedScreen = ({ navigation }: Props) => {
     }
   };
 
+  const toggleFollow = async (targetUserId: string, currentlyFollowing: boolean) => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return;
+
+    const method = currentlyFollowing ? "DELETE" : "POST";
+
+    const res = await fetch(`${API_URL}/api/follow/${targetUserId}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) return;
+
+    // OPTIMISTIC UI UPDATE — natychmiastowe odświeżenie
+    setPosts(prev =>
+      prev.map(p => {
+        if (p?.author?.id !== targetUserId) return p;
+        return { ...p, __following: !currentlyFollowing };
+      })
+    );
+
+  } catch (err) {
+    console.log("Toggle Follow Error:", err);
+  }
+};
+
   const handlePostPress = (postId: string) => {
     navigation.navigate('PostDetail', { postId });
   };
@@ -277,6 +278,24 @@ const FeedScreen = ({ navigation }: Props) => {
             <View style={styles.postAuthorRow}>
               <Avatar.Text size={24} label={item.author.name.substring(0,2).toUpperCase()} style={styles.postAuthorAvatar} color="#fff" />
               <Text style={styles.postAuthorName}>by {item.author.name}</Text>
+              {item.author?.id !== currentUserId && (
+              <TouchableOpacity
+                onPress={() => toggleFollow(item.author.id, item.__following)}
+                style={[
+                  styles.followButton,
+                  item.__following ? styles.following : styles.notFollowing
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.followButtonText,
+                    item.__following ? styles.followingText : styles.notFollowingText
+                  ]}
+                >
+                  {item.__following ? "Obserwujesz" : "Obserwuj"}
+                </Text>
+              </TouchableOpacity>
+              )}
             </View>
           ) : null}
           {item.content ? (
@@ -429,6 +448,12 @@ const styles = StyleSheet.create({
   emptyContainer: { padding: 24, alignItems: 'center' },
   emptyText: { color: '#666' },
   fab: { position: 'absolute', right: 20, bottom: 30, backgroundColor: '#000' },
+  followButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: "auto",},
+  following: { backgroundColor: "#DDD",},
+  notFollowing: { backgroundColor: "#FF4444",},
+  followButtonText: { fontWeight: "600",},
+  followingText: { color: "#333",},
+  notFollowingText: { color: "#FFF",},
 });
 
 export default FeedScreen;

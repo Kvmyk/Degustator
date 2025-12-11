@@ -38,6 +38,7 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
   const [newComment, setNewComment] = useState<string>('');
   const [newRating, setNewRating] = useState<number>(0);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
+  const [following, setFollowing] = useState<boolean>(false);
 
   const toNumber = (v: any) =>
     v && typeof v === 'object' && 'low' in v ? v.low : typeof v === 'number' ? v : 0;
@@ -90,6 +91,18 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
             setLiked(!!(payload && payload.liked));
           }
         }
+
+        // 🔹 Follow status
+        if (uid && data?.author?.id && data.author.id !== uid) {
+          const followRes = await fetch(
+            `${API_URL}/api/follow/is-following/${encodeURIComponent(data.author.id)}`,
+            { headers }
+          );
+          if (followRes.ok) {
+            const followData = await followRes.json().catch(() => null);
+            setFollowing(!!followData);
+          }
+        }
       } catch {}
     } catch (e: any) {
       console.error(e);
@@ -135,6 +148,34 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
       Alert.alert('Błąd', e.message || 'Wystąpił problem z siecią');
     }
   };
+
+  const toggleFollow = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token || !post?.author?.id) return;
+
+      const method = following ? 'DELETE' : 'POST';
+
+      const res = await fetch(`${API_URL}/api/follow/${post.author.id}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        console.log('Failed to toggle follow');
+        return;
+      }
+
+      // 🔹 OPTIMISTIC UI UPDATE
+      setFollowing(!following);
+    } catch (err) {
+      console.log('Toggle Follow Error:', err);
+    }
+  };
+
 
   const submitReview = async () => {
     try {
@@ -214,6 +255,26 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
                   color="#fff"
                 />
                 <Text style={styles.authorName}>by {post.author.name}</Text>
+
+                {/* 🔹 Follow button */}
+                {post.author.id !== currentUserId && (
+                  <TouchableOpacity
+                    onPress={toggleFollow}
+                    style={[
+                      styles.followButton,
+                      following ? styles.following : styles.notFollowing
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.followButtonText,
+                        following ? styles.followingText : styles.notFollowingText
+                      ]}
+                    >
+                      {following ? 'Obserwujesz' : 'Obserwuj'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : null}
 
@@ -572,6 +633,12 @@ const styles = StyleSheet.create({
     color: '#1f7a1f',
     fontWeight: '600',
   },
+  followButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 'auto' },
+  following: { backgroundColor: '#DDD' },
+  notFollowing: { backgroundColor: '#FF4444' },
+  followButtonText: { fontWeight: '600' },
+  followingText: { color: '#333' },
+  notFollowingText: { color: '#FFF' },
 });
 
 export default PostDetailScreen;
