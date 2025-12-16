@@ -14,6 +14,7 @@ export class ApiController {
         reviews: '/api/reviews',
         tags: '/api/tags',
         ingredients: '/api/ingredients',
+        notifications: '/api/notifications',
       },
     };
   }

@@ -249,6 +249,10 @@ const FeedScreen = ({ navigation }: Props) => {
     navigation.navigate('AddPost');
   };
 
+  const handleNotificationsPress = () => {
+    navigation.navigate('Notifications');
+  };
+
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('token');
@@ -351,6 +355,9 @@ const FeedScreen = ({ navigation }: Props) => {
           <Avatar.Text size={40} label={userName.substring(0, 2).toUpperCase()} style={{ backgroundColor: '#ccc' }} />
           <Text style={[styles.userName, { marginLeft: 12 }]}>{userName}</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={handleNotificationsPress} style={styles.notificationButton}>
+          <Text style={styles.notificationIcon}>🔔</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
@@ -428,7 +435,9 @@ const FeedScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  logoutButton: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#ffefef', borderWidth: 1, borderColor: '#ffcccc' },
+  notificationButton: { marginLeft: 'auto', marginRight: 8, paddingHorizontal: 6, paddingVertical: 6, borderRadius: 999, backgroundColor: '#fff3cd', borderWidth: 1, borderColor: '#ffeeba' },
+  notificationIcon: { fontSize: 18, color: '#856404' },
+  logoutButton: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#ffefef', borderWidth: 1, borderColor: '#ffcccc' },
   logoutText: { color: '#d32f2f', fontWeight: '600' },
   userName: { fontSize: 16, color: '#333', fontWeight: '500' },
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#e8f4f8' },

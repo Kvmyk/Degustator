@@ -17,6 +17,7 @@ import EditUserProfileScreen from './src/screens/EditUserProfile';
 import FollowsListScreen from './src/screens/FollowsListScreen';
 import LikesListScreen from './src/screens/LikesListScreen';
 import ReviewListScreen from './src/screens/ReviewListScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 
 // Ensure RootStackParamList includes correct params for screens that use route.params
 export type RootStackParamList = {
@@ -33,6 +34,7 @@ export type RootStackParamList = {
   FollowsList: { userId: string; type: 'followers' | 'following' };
   LikesList: { userId: string };
   ReviewList: { userId: string };
+  Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -62,6 +64,7 @@ function App() {
             <Stack.Screen name="FollowsList" component={FollowsListScreen} options={{ headerShown: true, title: 'Connections' }} />
             <Stack.Screen name="LikesList" component={LikesListScreen} />
             <Stack.Screen name="ReviewList" component={ReviewListScreen} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>
