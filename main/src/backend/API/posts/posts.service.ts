@@ -3,10 +3,14 @@ import { Neo4jService } from '../../db/neo4j.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { POST_CATEGORIES } from './dto/create-post.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PostsService {
-  constructor(private neo4jService: Neo4jService) {}
+  constructor(
+    private readonly neo4jService: Neo4jService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(createPostDto: CreatePostDto): Promise<any> {
     try {
@@ -41,6 +45,19 @@ export class PostsService {
       }
 
       const post = result[0].p.properties;
+
+      // Create notifications for followers of the author
+      try {
+        await this.notificationsService.createPostNotifications(
+          createPostDto.userId,
+          post.id,
+          post.title,
+        );
+      } catch (error) {
+        // Do not fail post creation if notifications fail
+        console.error('Failed to create post notifications:', error?.message || error);
+      }
+
       return post;
     } catch (error) {
       throw new BadRequestException(`Failed to create post: ${error.message}`);
