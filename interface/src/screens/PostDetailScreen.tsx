@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Share,
 } from 'react-native';
 import { Text, Divider, Avatar, TextInput } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -182,6 +183,21 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
     }
   };
 
+  const handleShare = useCallback(async () => {
+    try {
+      const postUrl = `degustator://post/${postId}`;
+      const message = `Sprawdź ten post: ${post?.title || 'Post'}\n${postUrl}`;
+      
+      await Share.share({
+        message,
+        url: postUrl,
+        title: post?.title || 'Post',
+      });
+    } catch (error: any) {
+      console.error('Share error:', error);
+    }
+  }, [postId, post?.title]);
+
 
   const submitReview = async () => {
     try {
@@ -235,7 +251,9 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
               <Text style={styles.backArrow}>←</Text>
             </TouchableOpacity>
             <Text style={styles.topBarTitle}>Post</Text>
-            <View style={{ width: 24 }} />
+            <TouchableOpacity onPress={handleShare}>
+              <Text style={styles.shareIcon}>🔗</Text>
+            </TouchableOpacity>
           </View>
           {post && Array.isArray(post.photos) && post.photos.length > 0 ? (
             <Image source={{ uri: post.photos[0] }} style={styles.headerImage} resizeMode="cover" />
@@ -433,6 +451,7 @@ const styles = StyleSheet.create({
   topBar: { height: 50, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   backArrow: { fontSize: 22, color: '#333', paddingRight: 8 },
   topBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '600', color: '#333' },
+  shareIcon: { fontSize: 24, color: '#333' },
   headerImage: {
     width: '100%',
     height: 300,
