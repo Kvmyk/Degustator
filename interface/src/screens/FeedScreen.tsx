@@ -440,6 +440,8 @@ const FeedScreen = ({ navigation }: Props) => {
                 style={[styles.categoryChip, selectedCategory === category && styles.selectedChip]}
                 textStyle={[styles.categoryChipText, selectedCategory === category && styles.selectedChipText]}
                 mode={selectedCategory === category ? 'flat' : 'outlined'}
+                rippleColor="transparent"
+                showSelectedCheck={false}
               >
                 {category}
               </Chip>
