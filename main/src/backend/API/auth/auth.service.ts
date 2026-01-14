@@ -12,7 +12,7 @@ export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly neo4jService: Neo4jService,
-  ) { }
+  ) {}
 
   // Rejestracja
   async register(createUserDto: CreateUserDto): Promise<UserResponse> {
@@ -61,32 +61,32 @@ export class AuthService {
 
     try {
       const result = await this.neo4jService.read(
-        'MATCH (u:User {email: $email}) RETURN u',
-        { email }
-      );
+  'MATCH (u:User {email: $email}) RETURN u',
+  { email }
+);
 
-      if (result.length === 0) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
+if (result.length === 0) {
+  throw new UnauthorizedException('Invalid credentials');
+}
 
-      // Jeśli Neo4j zwraca node z properties
-      const userNode = result[0].u.properties;
+// Jeśli Neo4j zwraca node z properties
+const userNode = result[0].u.properties;
 
-      if (!password || !userNode.password_hash) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
+if (!password || !userNode.password_hash) {
+  throw new UnauthorizedException('Invalid credentials');
+}
 
-      const isPasswordValid = await bcrypt.compare(password, userNode.password_hash);
+const isPasswordValid = await bcrypt.compare(password, userNode.password_hash);
 
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
+if (!isPasswordValid) {
+  throw new UnauthorizedException('Invalid credentials');
+}
 
-      const token = this.jwtService.sign({ sub: userNode.id, email: userNode.email });
+const token = this.jwtService.sign({ sub: userNode.id, email: userNode.email });
 
-      const { password_hash, ...userWithoutPassword } = userNode;
+const { password_hash, ...userWithoutPassword } = userNode;
 
-      return { token, user: userWithoutPassword };
+return { token, user: userWithoutPassword };
 
 
     } catch (error) {
