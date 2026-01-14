@@ -39,11 +39,23 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const linking = {
+  prefixes: ['degustator://', 'https://degustator.app'],
+  config: {
+    screens: {
+      PostDetail: 'post/:postId',
+      UserProfile: 'user/:userId',
+      Feed: 'feed',
+      Login: 'login',
+    },
+  },
+};
+
 function App() {
   return (
     <SafeAreaProvider>
       <PaperProvider>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <StatusBar barStyle="dark-content" />
           <Stack.Navigator
             initialRouteName="Login"

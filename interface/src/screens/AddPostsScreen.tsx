@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Text, TextInput, Button, HelperText, Snackbar, Card } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@env';
+
+import { launchImageLibrary, Asset } from 'react-native-image-picker';
 
 type AddPostNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddPost'>;
 
@@ -18,7 +20,7 @@ const AddPostsScreen = ({ navigation }: Props) => {
   const [content, setContent] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [tags, setTags] = useState('');
-  const [photos, setPhotos] = useState('');
+  const [selectedImages, setSelectedImages] = useState<Asset[]>([]);
   const [recipe, setRecipe] = useState('');
   const [category, setCategory] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -66,6 +68,59 @@ const AddPostsScreen = ({ navigation }: Props) => {
     [ingredients]
   );
 
+  const handlePickImages = async () => {
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+      quality: 0.8,
+    });
+
+    if (result.errorMessage) {
+      Alert.alert('Error', result.errorMessage);
+    } else if (result.assets) {
+      setSelectedImages(result.assets);
+    }
+  };
+
+
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (token: string): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    for (const image of selectedImages) {
+      if (!image.uri) continue;
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: Platform.OS === 'ios' ? image.uri.replace('file://', '') : image.uri,
+        type: image.type || 'image/jpeg',
+        name: image.fileName || `photo_${Date.now()}.jpg`,
+      } as any);
+
+      const res = await fetch(`${API_URL}/api/uploads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to upload image`);
+      }
+
+      const data = await res.json();
+      if (data.url) {
+        uploadedUrls.push(data.url);
+      }
+    }
+    return uploadedUrls;
+  };
+
   const handleSubmit = async () => {
     setError(null);
     setSuccess(null);
@@ -83,10 +138,15 @@ const AddPostsScreen = ({ navigation }: Props) => {
         throw new Error('You must be logged in to add a post');
       }
 
-      const photosArray = photos
-        .split(',')
-        .map(p => p.trim())
-        .filter(Boolean);
+      // Upload images first
+      let uploadedPhotoUrls: string[] = [];
+      if (selectedImages.length > 0) {
+        try {
+          uploadedPhotoUrls = await uploadImages(token);
+        } catch (uploadError) {
+          throw new Error('Failed to upload one or more images');
+        }
+      }
 
       const res = await fetch(`${API_URL}/api/posts`, {
         method: 'POST',
@@ -98,7 +158,7 @@ const AddPostsScreen = ({ navigation }: Props) => {
           title: title.trim(),
           content: content.trim(),
           recipe: recipe.trim() || parsedIngredients.join(', ') || 'Recipe not provided',
-          photos: photosArray,
+          photos: uploadedPhotoUrls,
           userId,
           category: category || 'Other',
           // tagIds and ingredientIds are optional and require UUIDs; skipping here
@@ -181,7 +241,7 @@ const AddPostsScreen = ({ navigation }: Props) => {
       setContent('');
       setTags('');
       setIngredients('');
-      setPhotos('');
+      setSelectedImages([]);
       setRecipe('');
       setCategory('');
 
@@ -208,100 +268,118 @@ const AddPostsScreen = ({ navigation }: Props) => {
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             <Card style={styles.card}>
               <Card.Content>
-              <Text style={styles.sectionLabel}>Category</Text>
-              <View style={styles.categoryRow}>
-                {categories.map(c => (
-                  <Button
-                    key={c}
-                    mode={category === c ? 'contained' : 'outlined'}
-                    style={styles.categoryChip}
-                    onPress={() => setCategory(c)}
-                    disabled={submitting}
-                  >
-                    {c}
-                  </Button>
-                ))}
-              </View>
-              <HelperText type="error" visible={isCategoryInvalid}>
-                Please select a category
-              </HelperText>
-              <TextInput
-                label="Title"
-                value={title}
-                onChangeText={setTitle}
-                mode="outlined"
-                style={styles.input}
-                disabled={submitting}
-              />
-              <HelperText type="error" visible={isTitleInvalid}>
-                Title must be at least 3 characters
-              </HelperText>
+                <Text style={styles.sectionLabel}>Category</Text>
+                <View style={styles.categoryRow}>
+                  {categories.map(c => (
+                    <Button
+                      key={c}
+                      mode={category === c ? 'contained' : 'outlined'}
+                      style={styles.categoryChip}
+                      onPress={() => setCategory(c)}
+                      disabled={submitting}
+                    >
+                      {c}
+                    </Button>
+                  ))}
+                </View>
+                <HelperText type="error" visible={isCategoryInvalid}>
+                  Please select a category
+                </HelperText>
+                <TextInput
+                  label="Title"
+                  value={title}
+                  onChangeText={setTitle}
+                  mode="outlined"
+                  style={styles.input}
+                  disabled={submitting}
+                />
+                <HelperText type="error" visible={isTitleInvalid}>
+                  Title must be at least 3 characters
+                </HelperText>
 
-              <TextInput
-                label="Content"
-                value={content}
-                onChangeText={setContent}
-                mode="outlined"
-                style={styles.input}
-                multiline
-                numberOfLines={6}
-                disabled={submitting}
-              />
-              <HelperText type="error" visible={isContentInvalid}>
-                Content must be at least 10 characters
-              </HelperText>
+                <TextInput
+                  label="Content"
+                  value={content}
+                  onChangeText={setContent}
+                  mode="outlined"
+                  style={styles.input}
+                  multiline
+                  numberOfLines={6}
+                  disabled={submitting}
+                />
+                <HelperText type="error" visible={isContentInvalid}>
+                  Content must be at least 10 characters
+                </HelperText>
 
-              <TextInput
-                label="Ingredients (comma separated)"
-                value={ingredients}
-                onChangeText={setIngredients}
-                mode="outlined"
-                style={styles.input}
-                placeholder="e.g. vodka, lime, sugar"
-                disabled={submitting}
-              />
-              <HelperText type="error" visible={isIngredientsInvalid}>
-                Provide at least one ingredient
-              </HelperText>
-              {parsedIngredients.length > 0 && (
-                <Text style={styles.tagsPreview}>Ingredients: {parsedIngredients.join(' • ')}</Text>
-              )}
+                <TextInput
+                  label="Ingredients (comma separated)"
+                  value={ingredients}
+                  onChangeText={setIngredients}
+                  mode="outlined"
+                  style={styles.input}
+                  placeholder="e.g. vodka, lime, sugar"
+                  disabled={submitting}
+                />
+                <HelperText type="error" visible={isIngredientsInvalid}>
+                  Provide at least one ingredient
+                </HelperText>
+                {parsedIngredients.length > 0 && (
+                  <Text style={styles.tagsPreview}>Ingredients: {parsedIngredients.join(' • ')}</Text>
+                )}
 
-              <TextInput
-                label="Tags (comma separated)"
-                value={tags}
-                onChangeText={setTags}
-                mode="outlined"
-                style={styles.input}
-                placeholder="e.g. pasta, dinner, quick"
-                disabled={submitting}
-              />
+                <TextInput
+                  label="Tags (comma separated)"
+                  value={tags}
+                  onChangeText={setTags}
+                  mode="outlined"
+                  style={styles.input}
+                  placeholder="e.g. pasta, dinner, quick"
+                  disabled={submitting}
+                />
 
-              {parsedTags.length > 0 && (
-                <Text style={styles.tagsPreview}>Tags: {parsedTags.join(' • ')}</Text>
-              )}
+                {parsedTags.length > 0 && (
+                  <Text style={styles.tagsPreview}>Tags: {parsedTags.join(' • ')}</Text>
+                )}
 
-              <TextInput
-                label="Recipe"
-                value={recipe}
-                onChangeText={setRecipe}
-                mode="outlined"
-                style={styles.input}
-                multiline
-                numberOfLines={5}
-                placeholder="Describe preparation steps..."
-                disabled={submitting}
-              />
+                <TextInput
+                  label="Recipe"
+                  value={recipe}
+                  onChangeText={setRecipe}
+                  mode="outlined"
+                  style={styles.input}
+                  multiline
+                  numberOfLines={5}
+                  placeholder="Describe preparation steps..."
+                  disabled={submitting}
+                />
 
-              <TextInput
-                label="Photo URLs (comma separated)"
-                value={photos}
-                onChangeText={setPhotos}
-                mode="outlined"
-                style={styles.input}
-                placeholder="https://..., https://..."
-                disabled={submitting}
-              />
+
+
+                <Text style={styles.sectionLabel}>Photos</Text>
+                <View style={styles.photosContainer}>
+                  {selectedImages.map((img, index) => (
+                    <View key={index} style={styles.photoWrapper}>
+                      <Image source={{ uri: img.uri }} style={styles.photoPreview} />
+                      <TouchableOpacity
+                        style={styles.removePhoto}
+                        onPress={() => removeImage(index)}
+                        disabled={submitting}
+                      >
+                        <Text style={styles.removePhotoText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {selectedImages.length === 0 && (
+                    <Button
+                      mode="outlined"
+                      onPress={handlePickImages}
+                      disabled={submitting}
+                      style={styles.addPhotoButton}
+                    >
+                      Pick Image
+                    </Button>
+                  )}
+                </View>
 
                 <View style={styles.actions}>
                   <Button mode="text" onPress={() => navigation.goBack()} disabled={submitting}>
@@ -346,6 +424,22 @@ const styles = StyleSheet.create({
   sectionLabel: { marginTop: 12, fontWeight: '600' },
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   categoryChip: { marginRight: 8, marginBottom: 8 },
+  photosContainer: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoWrapper: { position: 'relative' },
+  photoPreview: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#eee' },
+  removePhoto: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removePhotoText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
+  addPhotoButton: { justifyContent: 'center' },
 });
 
 export default AddPostsScreen;

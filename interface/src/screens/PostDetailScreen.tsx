@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Share,
 } from 'react-native';
 import { Text, Divider, Avatar, TextInput } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -36,7 +37,7 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
   const [likeCount, setLikeCount] = useState<number>(0);
   const [reviews, setReviews] = useState<any[]>([]);
   const [newComment, setNewComment] = useState<string>('');
-  const [newRating, setNewRating] = useState<number>(0);
+  const [newRating, setNewRating] = useState<number | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const [following, setFollowing] = useState<boolean>(false);
 
@@ -182,6 +183,21 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
     }
   };
 
+  const handleShare = useCallback(async () => {
+    try {
+      const postUrl = `degustator://post/${postId}`;
+      const message = `Sprawdź ten post: ${post?.title || 'Post'}\n${postUrl}`;
+      
+      await Share.share({
+        message,
+        url: postUrl,
+        title: post?.title || 'Post',
+      });
+    } catch (error: any) {
+      console.error('Share error:', error);
+    }
+  }, [postId, post?.title]);
+
 
   const submitReview = async () => {
     try {
@@ -193,11 +209,18 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
       }
       const user = JSON.parse(userData);
       const content = newComment.trim();
-      const rating = Math.max(0, Math.min(5, Number(newRating)));
+      
       if (!content) {
         Alert.alert('Uwaga', 'Wpisz treść recenzji.');
         return;
       }
+      
+      if (newRating === null) {
+        Alert.alert('Uwaga', 'Wybierz ocenę (1-5).');
+        return;
+      }
+      
+      const rating = Math.max(0, Math.min(5, Number(newRating)));
 
       const res = await fetch(`${API_URL}/api/reviews`, {
         method: 'POST',
@@ -209,13 +232,16 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        Alert.alert('Błąd', err.message || 'Nie udało się dodać recenzji');
+        const errorMessage = Array.isArray(err.message) 
+          ? err.message.join(', ') 
+          : String(err.message || 'Nie udało się dodać recenzji');
+        Alert.alert('Błąd', errorMessage);
         return;
       }
 
       await fetchPost();
       setNewComment('');
-      setNewRating(0);
+      setNewRating(null);
     } catch (e: any) {
       console.error('Add review error:', e);
       Alert.alert('Błąd', e.message || 'Wystąpił problem z siecią');
@@ -235,7 +261,9 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
               <Text style={styles.backArrow}>←</Text>
             </TouchableOpacity>
             <Text style={styles.topBarTitle}>Post</Text>
-            <View style={{ width: 24 }} />
+            <TouchableOpacity onPress={handleShare}>
+              <Text style={styles.shareIcon}>🔗</Text>
+            </TouchableOpacity>
           </View>
           {post && Array.isArray(post.photos) && post.photos.length > 0 ? (
             <Image source={{ uri: post.photos[0] }} style={styles.headerImage} resizeMode="cover" />
@@ -384,9 +412,9 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
               if (isAuthor || reviewed) return null;
               return (
                 <View style={styles.addCommentBox}>
-                  <Text style={styles.addCommentLabel}>Your rating (0-5): {newRating}</Text>
+                  <Text style={styles.addCommentLabel}>Your rating (1-5): {newRating !== null ? newRating : 'nie wybrano'}</Text>
                   <View style={styles.ratingButtonsRow}>
-                    {[0,1,2,3,4,5].map((n) => (
+                    {[1,2,3,4,5].map((n) => (
                       <TouchableOpacity key={`rate-${n}`} onPress={() => setNewRating(n)}>
                         <Text style={[styles.rateButton, newRating === n && styles.rateButtonActive]}>{n}</Text>
                       </TouchableOpacity>
@@ -405,7 +433,7 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
                     />
                   </View>
                   <View style={styles.addActionsRow}>
-                    <TouchableOpacity onPress={() => setNewComment('')}>
+                    <TouchableOpacity onPress={() => { setNewComment(''); setNewRating(null); }}>
                       <Text style={styles.clearButton}>Clear</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={submitReview}>
@@ -433,6 +461,7 @@ const styles = StyleSheet.create({
   topBar: { height: 50, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   backArrow: { fontSize: 22, color: '#333', paddingRight: 8 },
   topBarTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '600', color: '#333' },
+  shareIcon: { fontSize: 24, color: '#333' },
   headerImage: {
     width: '100%',
     height: 300,

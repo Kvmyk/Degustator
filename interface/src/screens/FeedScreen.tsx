@@ -7,8 +7,9 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
-import { Text, Chip, Card, Avatar, FAB, Searchbar } from 'react-native-paper';
+import { Text, Chip, Card, Avatar } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ const FeedScreen = ({ navigation }: Props) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchType, setSearchType] = useState<'posts' | 'users'>('posts');
+  const [feedType, setFeedType] = useState<'latest' | 'recommended'>('latest');
   const [posts, setPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,13 +64,19 @@ const FeedScreen = ({ navigation }: Props) => {
 
       // Category-based URL
       let url = `${API_URL}/api/posts?limit=50&sortBy=created_at`;
-      if (selectedCategory !== 'All') {
+
+      if (feedType === 'recommended') {
+        url = `${API_URL}/api/recommendations?limit=50`;
+      } else if (selectedCategory !== 'All') {
         url = `${API_URL}/api/posts/category?category=${encodeURIComponent(selectedCategory)}&limit=50&sortBy=created_at`;
       }
 
+      console.log('🔍 Fetching from URL:', url);
       const res = await fetch(url, { headers });
+      console.log('📥 Response status:', res.status);
       if (!res.ok) throw new Error(`Nie udało się pobrać postów: ${res.status}`);
       const data = await res.json();
+      console.log('📦 Received data, count:', Array.isArray(data) ? data.length : 'not array');
       const basePosts = Array.isArray(data) ? data : [];
 
       // Enrich posts with counts, tags, and liked status
@@ -132,7 +140,7 @@ const FeedScreen = ({ navigation }: Props) => {
     } finally {
       setLoadingPosts(false);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, feedType]);
 
   useEffect(() => {
     fetchPosts();
@@ -203,34 +211,34 @@ const FeedScreen = ({ navigation }: Props) => {
   };
 
   const toggleFollow = async (targetUserId: string, currentlyFollowing: boolean) => {
-  try {
-    const token = await AsyncStorage.getItem("token");
-    if (!token) return;
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
 
-    const method = currentlyFollowing ? "DELETE" : "POST";
+      const method = currentlyFollowing ? "DELETE" : "POST";
 
-    const res = await fetch(`${API_URL}/api/follow/${targetUserId}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    });
+      const res = await fetch(`${API_URL}/api/follow/${targetUserId}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
 
-    if (!res.ok) return;
+      if (!res.ok) return;
 
-    // OPTIMISTIC UI UPDATE — natychmiastowe odświeżenie
-    setPosts(prev =>
-      prev.map(p => {
-        if (p?.author?.id !== targetUserId) return p;
-        return { ...p, __following: !currentlyFollowing };
-      })
-    );
+      // OPTIMISTIC UI UPDATE — natychmiastowe odświeżenie
+      setPosts(prev =>
+        prev.map(p => {
+          if (p?.author?.id !== targetUserId) return p;
+          return { ...p, __following: !currentlyFollowing };
+        })
+      );
 
-  } catch (err) {
-    console.log("Toggle Follow Error:", err);
-  }
-};
+    } catch (err) {
+      console.log("Toggle Follow Error:", err);
+    }
+  };
 
   const handlePostPress = (postId: string) => {
     navigation.navigate('PostDetail', { postId });
@@ -293,26 +301,26 @@ const FeedScreen = ({ navigation }: Props) => {
           {item.author?.name ? (
             <View style={styles.postAuthorRow}>
               <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { userId: item.author.id })} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Avatar.Text size={24} label={item.author.name.substring(0,2).toUpperCase()} style={styles.postAuthorAvatar} color="#fff" />
+                <Avatar.Text size={24} label={item.author.name.substring(0, 2).toUpperCase()} style={styles.postAuthorAvatar} color="#fff" />
                 <Text style={styles.postAuthorName}>by {item.author.name}</Text>
               </TouchableOpacity>
               {item.author?.id !== currentUserId && (
-              <TouchableOpacity
-                onPress={() => toggleFollow(item.author.id, item.__following)}
-                style={[
-                  styles.followButton,
-                  item.__following ? styles.following : styles.notFollowing
-                ]}
-              >
-                <Text
+                <TouchableOpacity
+                  onPress={() => toggleFollow(item.author.id, item.__following)}
                   style={[
-                    styles.followButtonText,
-                    item.__following ? styles.followingText : styles.notFollowingText
+                    styles.followButton,
+                    item.__following ? styles.following : styles.notFollowing
                   ]}
                 >
-                  {item.__following ? "Obserwujesz" : "Obserwuj"}
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.followButtonText,
+                      item.__following ? styles.followingText : styles.notFollowingText
+                    ]}
+                  >
+                    {item.__following ? "Obserwujesz" : "Obserwuj"}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
           ) : null}
@@ -364,16 +372,14 @@ const FeedScreen = ({ navigation }: Props) => {
       </View>
 
       {/* 🔹 Searchbar */}
-      <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder={searchType === 'posts' ? 'Search beverages...' : 'Search users...'}
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          onFocus={handleSearchFocus}
-          onSubmitEditing={handleSearchFocus}
-          style={styles.searchBar}
-        />
-      </View>
+      <TouchableOpacity style={styles.searchContainer} onPress={handleSearchFocus} activeOpacity={0.7}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchPlaceholder}>
+            {searchType === 'posts' ? 'Search beverages...' : 'Search users...'}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       {/* 🔹 Zakładki wyszukiwania */}
       <View style={styles.searchTypeContainer}>
@@ -396,25 +402,57 @@ const FeedScreen = ({ navigation }: Props) => {
         </TouchableOpacity>
       </View>
 
-      {/* 🔹 Kategorie */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer} contentContainerStyle={styles.categoriesContent}>
-        {categories.map(category => (
-          <Chip
-            key={category}
-            selected={selectedCategory === category}
-            onPress={() => setSelectedCategory(category)}
-            style={[styles.categoryChip, selectedCategory === category && styles.selectedChip]}
-            textStyle={[styles.categoryChipText, selectedCategory === category && styles.selectedChipText]}
-            mode={selectedCategory === category ? 'flat' : 'outlined'}
+      {/* 🔹 Feed Type Toggle */}
+      {searchType === 'posts' && (
+        <View style={styles.feedTypeContainer}>
+          <TouchableOpacity
+            style={[styles.feedTypeButton, feedType === 'latest' && styles.feedTypeButtonActive]}
+            onPress={() => setFeedType('latest')}
           >
-            {category}
-          </Chip>
-        ))}
-      </ScrollView>
+            <Text style={[styles.feedTypeButtonText, feedType === 'latest' && styles.feedTypeButtonTextActive]}>
+              🕒 Latest
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.feedTypeButton, feedType === 'recommended' && styles.feedTypeButtonActive]}
+            onPress={() => {
+              setFeedType('recommended');
+              setSelectedCategory('All'); // Reset category when switching to recommended
+            }}
+          >
+            <Text style={[styles.feedTypeButtonText, feedType === 'recommended' && styles.feedTypeButtonTextActive]}>
+              ✨ For You
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 🔹 Kategorie (Only show for Latest feed) */}
+      {feedType === 'latest' && (
+        <View style={styles.categoriesWrapper}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer} contentContainerStyle={styles.categoriesContent}>
+            {categories.map(category => (
+              <Chip
+                key={category}
+                selected={selectedCategory === category}
+                onPress={() => setSelectedCategory(category)}
+                style={[styles.categoryChip, selectedCategory === category && styles.selectedChip]}
+                textStyle={[styles.categoryChipText, selectedCategory === category && styles.selectedChipText]}
+                mode={selectedCategory === category ? 'flat' : 'outlined'}
+                rippleColor="transparent"
+                showSelectedCheck={false}
+              >
+                {category}
+              </Chip>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* 🔹 Lista postów */}
       {loadingPosts ? (
-        <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#666" /></View>
+        <View style={[styles.loaderContainer, styles.postsSection]}><ActivityIndicator size="large" color="#666" /></View>
       ) : (
         <FlatList
           data={posts}
@@ -422,12 +460,16 @@ const FeedScreen = ({ navigation }: Props) => {
           renderItem={renderPost}
           refreshing={refreshing}
           onRefresh={onRefresh}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}
+          style={styles.postsSection}
           ListEmptyComponent={<View style={styles.emptyContainer}><Text style={styles.emptyText}>Brak postów</Text></View>}
         />
       )}
 
-      <FAB icon="plus" label="Add" style={styles.fab} onPress={handleAddPost} />
+      <TouchableOpacity style={styles.fab} onPress={handleAddPost} activeOpacity={0.8}>
+        <Text style={styles.fabIcon}>➕</Text>
+        <Text style={styles.fabLabel}>Add</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -441,13 +483,21 @@ const styles = StyleSheet.create({
   logoutText: { color: '#d32f2f', fontWeight: '600' },
   userName: { fontSize: 16, color: '#333', fontWeight: '500' },
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#e8f4f8' },
-  searchBar: { elevation: 0, backgroundColor: '#e8f4f8' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: '#ddd' },
+  searchIcon: { fontSize: 18, marginRight: 10 },
+  searchPlaceholder: { fontSize: 16, color: '#888' },
   searchTypeContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0', gap: 8 },
   searchTypeButton: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#f5f5f5', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   searchTypeButtonActive: { backgroundColor: '#000', borderColor: '#000' },
   searchTypeButtonText: { fontSize: 12, fontWeight: '500', color: '#666' },
   searchTypeButtonTextActive: { color: '#fff' },
-  categoriesContainer: { backgroundColor: '#fff', flexGrow: 0, paddingVertical: 8 },
+  feedTypeContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', gap: 8 },
+  feedTypeButton: { flex: 1, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#f0f0f0', alignItems: 'center', borderWidth: 1, borderColor: 'transparent' },
+  feedTypeButtonActive: { backgroundColor: '#fff', borderColor: '#000' },
+  feedTypeButtonText: { fontSize: 13, fontWeight: '600', color: '#888' },
+  feedTypeButtonTextActive: { color: '#000' },
+  categoriesWrapper: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0', marginBottom: 8 },
+  categoriesContainer: { flexGrow: 0, paddingVertical: 8 },
   categoriesContent: { paddingHorizontal: 16, paddingVertical: 0 },
   categoryChip: { marginRight: 8, backgroundColor: '#fff', height: 30, width: 70, justifyContent: 'center' },
   selectedChip: { backgroundColor: '#000' },
@@ -477,13 +527,16 @@ const styles = StyleSheet.create({
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { padding: 24, alignItems: 'center' },
   emptyText: { color: '#666' },
-  fab: { position: 'absolute', right: 20, bottom: 30, backgroundColor: '#000' },
-  followButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: "auto",},
-  following: { backgroundColor: "#DDD",},
-  notFollowing: { backgroundColor: "#FF4444",},
-  followButtonText: { fontWeight: "600",},
-  followingText: { color: "#333",},
-  notFollowingText: { color: "#FFF",},
+  fab: { position: 'absolute', right: 20, bottom: 30, backgroundColor: '#fff3cd', borderRadius: 28, paddingHorizontal: 20, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+  fabIcon: { fontSize: 16, marginRight: 6 },
+  fabLabel: { fontSize: 14, fontWeight: '600', color: '#333' },
+  postsSection: { marginTop: 0 },
+  followButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: "auto", },
+  following: { backgroundColor: "#DDD", },
+  notFollowing: { backgroundColor: "#FF4444", },
+  followButtonText: { fontWeight: "600", },
+  followingText: { color: "#333", },
+  notFollowingText: { color: "#FFF", },
 });
 
 export default FeedScreen;

@@ -9,8 +9,12 @@ import { TagsModule } from './API/tags/tags.module';
 import { IngredientsModule } from './API/ingredients/ingredients.module';
 import { AuthModule } from './API/auth/auth.module';
 import { FollowModule } from './API/follow/follow.module';
-import { SearchModule } from './API/search/search.module';  
+import { SearchModule } from './API/search/search.module';
 import { NotificationsModule } from './API/notifications/notifications.module';
+import { RecommendationsModule } from './API/recommendations/recommendations.module';
+import { UploadsModule } from './API/uploads/uploads.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -24,9 +28,15 @@ import { NotificationsModule } from './API/notifications/notifications.module';
     AuthModule,
     FollowModule,
     SearchModule,
-    NotificationsModule
+    NotificationsModule,
+    RecommendationsModule,
+    UploadsModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
   controllers: [ApiController],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

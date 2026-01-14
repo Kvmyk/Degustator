@@ -6,8 +6,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
-import { TextInput, Button, Text, Checkbox } from 'react-native-paper';
+import { TextInput, Button, Text } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -122,11 +123,12 @@ const LoginScreen = ({ navigation }: Props) => {
             />
 
             <View style={styles.checkboxContainer}>
-              <Checkbox.Android
-                status={rememberMe ? 'checked' : 'unchecked'}
+              <TouchableOpacity
                 onPress={() => setRememberMe(!rememberMe)}
-                color="#666"
-              />
+                style={styles.checkbox}
+              >
+                <Text style={styles.checkboxIcon}>{rememberMe ? '☑️' : '⬜'}</Text>
+              </TouchableOpacity>
               <Text style={styles.checkboxLabel}>Remember me</Text>
               <Button
                 mode="text"
@@ -263,6 +265,12 @@ const styles = StyleSheet.create({
   },
   signUpButtonContent: {
     paddingHorizontal: 8,
+  },
+  checkbox: {
+    marginRight: 8,
+  },
+  checkboxIcon: {
+    fontSize: 20,
   },
 });
 
