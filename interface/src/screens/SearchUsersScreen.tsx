@@ -78,7 +78,6 @@ const SearchUsersScreen = ({ navigation }: Props) => {
         onClearIconPress={handleClear}
         style={styles.searchbar}
         icon={() => <Text style={{ fontSize: 20 }}>🔍</Text>}
-        clearIcon={query ? () => <Text style={{ fontSize: 18, color: '#666' }}>×</Text> : undefined}
       />
 
       {error && (
@@ -103,7 +102,7 @@ const SearchUsersScreen = ({ navigation }: Props) => {
         data={results}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <UserItem
+          <UserItem 
             user={item}
             onPress={() => navigation.navigate('UserProfile', { userId: item.id })}
           />

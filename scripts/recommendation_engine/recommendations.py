@@ -1,10 +1,6 @@
 import os
 import sys
-from dotenv import load_dotenv
 from neo4j import GraphDatabase
-
-# Load .env file
-load_dotenv()
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import TruncatedSVD
@@ -16,12 +12,12 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "degustator")
 
 def get_data(driver):
     """
-    Fetches all user-post interactions from Neo4j.
-    Combines REVIEWS (with actual ratings) and LIKES (treated as rating 5.0).
-    Returns a pandas DataFrame with columns: [userID, itemID, rating, tags]
+    Fetches all user-review-post interactions from Neo4j.
+    Returns a pandas DataFrame with columns: [userID, itemID, rating]
     """
-    # Query for reviews (with actual ratings)
-    reviews_query = """
+    # Fetch User IDs, Post IDs, Ratings, AND Tags
+    # We aggregate tags into a list for each row
+    query = """
     MATCH (u:User)-[:CREATED]->(r:Review)-[:REVIEWED]->(p:Post)
     OPTIONAL MATCH (p)-[:HAS_TAG]->(t:Tag)
     RETURN 
@@ -30,31 +26,11 @@ def get_data(driver):
         r.rating as rating,
         collect(t.name) as tags
     """
-    
-    # Query for likes (treated as implicit rating of 5.0)
-    likes_query = """
-    MATCH (u:User)-[:LIKES]->(p:Post)
-    OPTIONAL MATCH (p)-[:HAS_TAG]->(t:Tag)
-    RETURN 
-        toString(u.id) as userID, 
-        toString(p.id) as itemID, 
-        5.0 as rating,
-        collect(t.name) as tags
-    """
-    
     with driver.session() as session:
-        # Get reviews
-        reviews_result = session.run(reviews_query)
-        reviews_data = [record.data() for record in reviews_result]
-        
-        # Get likes
-        likes_result = session.run(likes_query)
-        likes_data = [record.data() for record in likes_result]
+        result = session.run(query)
+        data = [record.data() for record in result]
     
-    # Combine both sources
-    all_data = reviews_data + likes_data
-    
-    return pd.DataFrame(all_data)
+    return pd.DataFrame(data)
 
 def get_all_posts_tags(driver):
     """
@@ -68,8 +44,8 @@ def get_all_posts_tags(driver):
     """
     with driver.session() as session:
         result = session.run(query)
-        # Filter out empty tags and convert to lowercase
-        return {r["itemID"]: [t.lower() for t in r["tags"] if t] for r in result}
+        # Filter out empty tags if any
+        return {r["itemID"]: [t for t in r["tags"] if t] for r in result}
 
 def calculate_tag_preferences(df):
     """
@@ -87,10 +63,9 @@ def calculate_tag_preferences(df):
         
         for tag in tags:
             if not tag: continue # skip nulls
-            tag_lower = tag.lower()  # Case-insensitive
-            if tag_lower not in user_tag_ratings[uid]:
-                user_tag_ratings[uid][tag_lower] = []
-            user_tag_ratings[uid][tag_lower].append(rating)
+            if tag not in user_tag_ratings[uid]:
+                user_tag_ratings[uid][tag] = []
+            user_tag_ratings[uid][tag].append(rating)
             
     # Compute averages
     user_profiles = {}
@@ -111,9 +86,8 @@ def get_content_score(user_profile, post_tags):
         
     scores = []
     for tag in post_tags:
-        tag_lower = tag.lower() if tag else None  # Case-insensitive
-        if tag_lower and tag_lower in user_profile:
-            scores.append(user_profile[tag_lower])
+        if tag in user_profile:
+            scores.append(user_profile[tag])
             
     if not scores:
         return 3.0
