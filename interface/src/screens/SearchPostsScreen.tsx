@@ -80,6 +80,7 @@ const SearchPostsScreen = ({ navigation }: Props) => {
         onClearIconPress={handleClear}
         style={styles.searchbar}
         icon={() => <Text style={{ fontSize: 20 }}>🔍</Text>}
+        clearIcon={query ? () => <Text style={{ fontSize: 18, color: '#666' }}>×</Text> : undefined}
       />
 
       {error && (
