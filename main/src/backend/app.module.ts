@@ -12,6 +12,9 @@ import { FollowModule } from './API/follow/follow.module';
 import { SearchModule } from './API/search/search.module';
 import { NotificationsModule } from './API/notifications/notifications.module';
 import { RecommendationsModule } from './API/recommendations/recommendations.module';
+import { UploadsModule } from './API/uploads/uploads.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -26,7 +29,12 @@ import { RecommendationsModule } from './API/recommendations/recommendations.mod
     FollowModule,
     SearchModule,
     NotificationsModule,
-    RecommendationsModule
+    RecommendationsModule,
+    UploadsModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
   controllers: [ApiController],
   providers: [],

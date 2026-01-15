@@ -7,8 +7,9 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
-import { Text, Chip, Card, Avatar, FAB, Searchbar } from 'react-native-paper';
+import { Text, Chip, Card, Avatar } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -70,9 +71,12 @@ const FeedScreen = ({ navigation }: Props) => {
         url = `${API_URL}/api/posts/category?category=${encodeURIComponent(selectedCategory)}&limit=50&sortBy=created_at`;
       }
 
+      console.log('🔍 Fetching from URL:', url);
       const res = await fetch(url, { headers });
+      console.log('📥 Response status:', res.status);
       if (!res.ok) throw new Error(`Nie udało się pobrać postów: ${res.status}`);
       const data = await res.json();
+      console.log('📦 Received data, count:', Array.isArray(data) ? data.length : 'not array');
       const basePosts = Array.isArray(data) ? data : [];
 
       // Enrich posts with counts, tags, and liked status
@@ -368,16 +372,14 @@ const FeedScreen = ({ navigation }: Props) => {
       </View>
 
       {/* 🔹 Searchbar */}
-      <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder={searchType === 'posts' ? 'Search beverages...' : 'Search users...'}
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          onFocus={handleSearchFocus}
-          onSubmitEditing={handleSearchFocus}
-          style={styles.searchBar}
-        />
-      </View>
+      <TouchableOpacity style={styles.searchContainer} onPress={handleSearchFocus} activeOpacity={0.7}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchPlaceholder}>
+            {searchType === 'posts' ? 'Search beverages...' : 'Search users...'}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       {/* 🔹 Zakładki wyszukiwania */}
       <View style={styles.searchTypeContainer}>
@@ -428,25 +430,29 @@ const FeedScreen = ({ navigation }: Props) => {
 
       {/* 🔹 Kategorie (Only show for Latest feed) */}
       {feedType === 'latest' && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer} contentContainerStyle={styles.categoriesContent}>
-          {categories.map(category => (
-            <Chip
-              key={category}
-              selected={selectedCategory === category}
-              onPress={() => setSelectedCategory(category)}
-              style={[styles.categoryChip, selectedCategory === category && styles.selectedChip]}
-              textStyle={[styles.categoryChipText, selectedCategory === category && styles.selectedChipText]}
-              mode={selectedCategory === category ? 'flat' : 'outlined'}
-            >
-              {category}
-            </Chip>
-          ))}
-        </ScrollView>
+        <View style={styles.categoriesWrapper}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer} contentContainerStyle={styles.categoriesContent}>
+            {categories.map(category => (
+              <Chip
+                key={category}
+                selected={selectedCategory === category}
+                onPress={() => setSelectedCategory(category)}
+                style={[styles.categoryChip, selectedCategory === category && styles.selectedChip]}
+                textStyle={[styles.categoryChipText, selectedCategory === category && styles.selectedChipText]}
+                mode={selectedCategory === category ? 'flat' : 'outlined'}
+                rippleColor="transparent"
+                showSelectedCheck={false}
+              >
+                {category}
+              </Chip>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       {/* 🔹 Lista postów */}
       {loadingPosts ? (
-        <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#666" /></View>
+        <View style={[styles.loaderContainer, styles.postsSection]}><ActivityIndicator size="large" color="#666" /></View>
       ) : (
         <FlatList
           data={posts}
@@ -454,12 +460,16 @@ const FeedScreen = ({ navigation }: Props) => {
           renderItem={renderPost}
           refreshing={refreshing}
           onRefresh={onRefresh}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}
+          style={styles.postsSection}
           ListEmptyComponent={<View style={styles.emptyContainer}><Text style={styles.emptyText}>Brak postów</Text></View>}
         />
       )}
 
-      <FAB icon="plus" label="Add" style={styles.fab} onPress={handleAddPost} />
+      <TouchableOpacity style={styles.fab} onPress={handleAddPost} activeOpacity={0.8}>
+        <Text style={styles.fabIcon}>➕</Text>
+        <Text style={styles.fabLabel}>Add</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -473,7 +483,9 @@ const styles = StyleSheet.create({
   logoutText: { color: '#d32f2f', fontWeight: '600' },
   userName: { fontSize: 16, color: '#333', fontWeight: '500' },
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#e8f4f8' },
-  searchBar: { elevation: 0, backgroundColor: '#e8f4f8' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: '#ddd' },
+  searchIcon: { fontSize: 18, marginRight: 10 },
+  searchPlaceholder: { fontSize: 16, color: '#888' },
   searchTypeContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0', gap: 8 },
   searchTypeButton: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#f5f5f5', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   searchTypeButtonActive: { backgroundColor: '#000', borderColor: '#000' },
@@ -484,7 +496,8 @@ const styles = StyleSheet.create({
   feedTypeButtonActive: { backgroundColor: '#fff', borderColor: '#000' },
   feedTypeButtonText: { fontSize: 13, fontWeight: '600', color: '#888' },
   feedTypeButtonTextActive: { color: '#000' },
-  categoriesContainer: { backgroundColor: '#fff', flexGrow: 0, paddingVertical: 8 },
+  categoriesWrapper: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0', marginBottom: 8 },
+  categoriesContainer: { flexGrow: 0, paddingVertical: 8 },
   categoriesContent: { paddingHorizontal: 16, paddingVertical: 0 },
   categoryChip: { marginRight: 8, backgroundColor: '#fff', height: 30, width: 70, justifyContent: 'center' },
   selectedChip: { backgroundColor: '#000' },
@@ -514,7 +527,10 @@ const styles = StyleSheet.create({
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { padding: 24, alignItems: 'center' },
   emptyText: { color: '#666' },
-  fab: { position: 'absolute', right: 20, bottom: 30, backgroundColor: '#000' },
+  fab: { position: 'absolute', right: 20, bottom: 30, backgroundColor: '#fff3cd', borderRadius: 28, paddingHorizontal: 20, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+  fabIcon: { fontSize: 16, marginRight: 6 },
+  fabLabel: { fontSize: 14, fontWeight: '600', color: '#333' },
+  postsSection: { marginTop: 0 },
   followButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: "auto", },
   following: { backgroundColor: "#DDD", },
   notFollowing: { backgroundColor: "#FF4444", },
