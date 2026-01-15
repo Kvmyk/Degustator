@@ -10,15 +10,12 @@ export class RecommendationsController {
     @UseGuards(OptionalAuthGuard)
     async getRecommendations(@Req() req, @Query('limit') limit: number, @Query('offset') offset: number) {
         const userId = req.user?.id;
-        console.log('🎯 [Controller] Recommendations request - userId:', userId, '| hasUser:', !!req.user);
         const limitNum = limit ? parseInt(limit.toString()) : 20;
         const offsetNum = offset ? parseInt(offset.toString()) : 0;
 
         if (userId) {
-            console.log('🎯 [Controller] Calling getRecommendations for user:', userId);
             return this.recommendationsService.getRecommendations(userId, limitNum, offsetNum);
         } else {
-            console.log('🎯 [Controller] No userId, calling getGuestRecommendations');
             return this.recommendationsService.getGuestRecommendations(limitNum);
         }
     }

@@ -37,7 +37,7 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
   const [likeCount, setLikeCount] = useState<number>(0);
   const [reviews, setReviews] = useState<any[]>([]);
   const [newComment, setNewComment] = useState<string>('');
-  const [newRating, setNewRating] = useState<number | null>(null);
+  const [newRating, setNewRating] = useState<number>(0);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const [following, setFollowing] = useState<boolean>(false);
 
@@ -209,18 +209,11 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
       }
       const user = JSON.parse(userData);
       const content = newComment.trim();
-      
+      const rating = Math.max(0, Math.min(5, Number(newRating)));
       if (!content) {
         Alert.alert('Uwaga', 'Wpisz treść recenzji.');
         return;
       }
-      
-      if (newRating === null) {
-        Alert.alert('Uwaga', 'Wybierz ocenę (1-5).');
-        return;
-      }
-      
-      const rating = Math.max(0, Math.min(5, Number(newRating)));
 
       const res = await fetch(`${API_URL}/api/reviews`, {
         method: 'POST',
@@ -232,16 +225,13 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        const errorMessage = Array.isArray(err.message) 
-          ? err.message.join(', ') 
-          : String(err.message || 'Nie udało się dodać recenzji');
-        Alert.alert('Błąd', errorMessage);
+        Alert.alert('Błąd', err.message || 'Nie udało się dodać recenzji');
         return;
       }
 
       await fetchPost();
       setNewComment('');
-      setNewRating(null);
+      setNewRating(0);
     } catch (e: any) {
       console.error('Add review error:', e);
       Alert.alert('Błąd', e.message || 'Wystąpił problem z siecią');
@@ -412,9 +402,9 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
               if (isAuthor || reviewed) return null;
               return (
                 <View style={styles.addCommentBox}>
-                  <Text style={styles.addCommentLabel}>Your rating (1-5): {newRating !== null ? newRating : 'nie wybrano'}</Text>
+                  <Text style={styles.addCommentLabel}>Your rating (0-5): {newRating}</Text>
                   <View style={styles.ratingButtonsRow}>
-                    {[1,2,3,4,5].map((n) => (
+                    {[0,1,2,3,4,5].map((n) => (
                       <TouchableOpacity key={`rate-${n}`} onPress={() => setNewRating(n)}>
                         <Text style={[styles.rateButton, newRating === n && styles.rateButtonActive]}>{n}</Text>
                       </TouchableOpacity>
@@ -433,7 +423,7 @@ const PostDetailScreen = ({ navigation, route }: Props) => {
                     />
                   </View>
                   <View style={styles.addActionsRow}>
-                    <TouchableOpacity onPress={() => { setNewComment(''); setNewRating(null); }}>
+                    <TouchableOpacity onPress={() => setNewComment('')}>
                       <Text style={styles.clearButton}>Clear</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={submitReview}>
